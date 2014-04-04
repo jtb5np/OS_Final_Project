@@ -4,7 +4,7 @@ use core::*;
 use core::str::*;
 use core::option::{Some, Option, None}; // Match statement
 use core::iter::Iterator;
-use core::vec::Vec;
+//use core::vec::Vec;
 use super::super::platform::*;
 
 
@@ -47,7 +47,7 @@ pub fn append(node: *tree_node, file: cstr, content: cstr) -> bool
 	    return false;
 	}
     }
-    let (*f).contents = f_contents;
+    (*f).contents = f_contents;
     return true;
 }
 

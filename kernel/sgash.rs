@@ -8,11 +8,20 @@ use kernel::*;
 use super::super::platform::*;
 use kernel::memory::Allocator;
 
+//#[path = "../rust-core/core/vec.rs"]
+//mod vec;
+
+
 pub static mut buffer: cstr = cstr {
 				p: 0 as *mut u8,
 				p_cstr_i: 0,
 				max: 0
 			      };
+
+pub static mut root: *mut dirnode = 0 as *mut dirnode;
+
+pub static mut wd: *mut dirnode = 0 as *mut dirnode;
+
 pub fn putchar(key: char) {
     unsafe {
 	/*
@@ -100,7 +109,7 @@ unsafe fn drawchar(x: char)
 		io::CURSOR_X = 0u32;
 		return;
 	}
-
+    
     io::restore();
     io::draw_char(x);
     io::CURSOR_X += io::CURSOR_WIDTH;
@@ -174,6 +183,10 @@ fn screen() {
 
 pub unsafe fn init() {
     buffer = cstr::new(256);
+    let root_name = cstr::from_str(&"root");
+    let root_dir = directory::new(root_name, 0 as *mut dirnode);
+    root = dirnode::new(root_dir);
+    wd = root;
     screen();
     prompt(true);
 }
@@ -216,8 +229,15 @@ unsafe fn parse() {
 			    };
 			}
 			else if(y.streq(&"open")) {
-			    putstr(&"\nTEST YO");
-			    drawstr(&"\nTEST YO");
+			    let name = cstr::from_str(&"root");
+			    let name2 = cstr::from_str(&"otherdir");
+			    create_file(wd, name);
+			    //delete_file(wd, name);
+			    if !(write_file(name, name2)) {
+				drawstr("lsakdjghaskdfh");
+			    }
+			    drawcstr(read_file(name));
+			    list_directory(wd);
 			}
 			else if(y.streq(&"echo")) {
 				let (a,b) = buffer.splitonce(' ');
@@ -253,48 +273,315 @@ unsafe fn parse() {
 	buffer.reset();
 }
 
+unsafe fn read_file(filename: cstr) -> cstr {
+	(*wd).di.read_file(filename)
+}
+
+unsafe fn write_file(filename: cstr, word: cstr) -> bool {
+	(*wd).di.write_file(filename, word)
+}
+
+unsafe fn create_file(dir: *mut dirnode, name: cstr) {
+	let mut newfile = file::new(1024, name);
+	(*dir).di.add_file(newfile);
+}
+
+unsafe fn delete_file(dir: *mut dirnode, name: cstr) -> bool {
+	(*dir).di.remove_file(name)
+}
+
+unsafe fn list_directory(dir: *mut dirnode) {
+	(*dir).di.directory_file_list()
+}
+
+
 /* BUFFER MODIFICATION FUNCTIONS */
 
-/*struct directory {
-	parent: *mut directory,
-	child_dir: *mut Vec<directory>,
-	files: *mut Vec<file>,
+struct directory {
+	parent: *mut dirnode,
+	child_dir: dirlist,
+	files: filelist,
 	dname: cstr
 }
 
 impl directory {
-	pub unsafe fn new(name: cstr, myparent: *mut directory) -> directory {
+	pub unsafe fn new(name: cstr, myparent: *mut dirnode) -> directory {
 		let this = directory {
 			parent: myparent,
-			child_dir: Vec::new(),
-			files: Vec::new(),
+			child_dir: dirlist::new(),
+			files: filelist::new(),
 			dname: name
 		};
 		this
 	}
+
+	pub unsafe fn add_file(&mut self, f: file) {
+		self.files.add_file(f);
+	}
+
+	pub unsafe fn remove_file(&mut self, fname: cstr) -> bool {
+		self.files.remove_file(fname)
+	}
+
+	pub unsafe fn add_dir(&mut self, d: directory) {
+		self.child_dir.add_dir(d);
+	}
+
+	pub unsafe fn remove_dir(&mut self, dname: cstr) -> bool {
+		self.child_dir.remove_dir(dname)
+	}
+
+	pub unsafe fn get_parent(&mut self) -> *mut dirnode {
+		self.parent
+	}
+
+	pub unsafe fn get_child(&mut self, dnm: cstr) -> *mut dirnode {
+		self.child_dir.get_dirnode(dnm)
+	}
+
+	pub unsafe fn read_file(&mut self, fnm: cstr) -> cstr {
+		self.files.read_file(fnm)
+	}
+
+	pub unsafe fn write_file(&mut self, fnm: cstr, word: cstr) -> bool {
+		self.files.write_file(fnm, word)
+	}
+
+	pub unsafe fn get_file(&mut self, fnm: cstr) -> file {
+		self.files.get_file(fnm)
+	}
+
+	pub unsafe fn directory_file_list(&mut self) {
+		self.files.print_filenames();
+		self.child_dir.print_dirnames();
+	}
 }
 
-
-struct file {
-	p: *mut u8,
-	size: uint,
-	max: uint,
-	fname: cstr
+struct dirnode {
+	next: *mut dirnode,
+	di: directory
 }
 
-impl file {
-	pub unsafe fn new(bytes: Vec<u8>, name: cstr) -> file {
-		let (x, y) = heap.alloc(bytes.len);
-		let this = file {
-			p: x,
-			size: bytes.len,
-			max: y,
-			fname: name
+impl dirnode {
+	pub unsafe fn new(d: directory) -> *mut dirnode {
+		let (x, y) = heap.alloc(256);
+		let this = dirnode{
+			next: 0 as *mut dirnode,
+			di: d
+		};
+		*(x as *mut dirnode) = this;
+		x as *mut dirnode
+	}
+}
+
+struct dirlist {
+	head: *mut dirnode
+}
+
+impl dirlist {
+	pub unsafe fn new() -> dirlist {		
+		let this = dirlist {
+			head: 0 as *mut dirnode
 		};
 		this
 	}
+
+	pub unsafe fn add_dir(&mut self, d: directory) {
+		let mut current = self.head;
+		if ((current as uint) == 0) {
+			self.head = dirnode::new(d);
+		}
+		else {
+			while ((((*current).next) as uint) != 0) {
+				current = (*current).next;
+			}
+			(*current).next = dirnode::new(d);
+		}
+	}
+
+	pub unsafe fn remove_dir(&mut self, dnm: cstr) -> bool {
+		let mut current = self.head;
+		if ((current as uint) == 0) {
+			return false;
+		}
+		if (((*current).di.dname).eq(&dnm)) {
+			let temp = (*current).next;
+			heap.free(current as *mut u8);
+			self.head = temp;
+			return true;
+		};
+		while ((((*current).next) as uint) != 0) {
+			if (((*(*current).next).di.dname).eq(&dnm)) {
+				let temp = (*(*current).next).next;
+				heap.free((*current).next as *mut u8);
+				(*current).next = temp;
+				return true;
+			};
+			current = (*current).next;
+		}
+		false
+	}
+
+	pub unsafe fn get_dirnode(&mut self, dnm: cstr) -> *mut dirnode {
+		let mut current = self.head;
+		while ((current as uint) != 0) {
+			if (((*current).di.dname).eq(&dnm)) {
+				return current;
+			};
+			current = (*current).next;
+		}
+		return 0 as *mut dirnode;
+	}
+
+	pub unsafe fn print_dirnames(&mut self) {
+		let mut current = self.head;
+		if (current as uint) == 0 {
+			drawstr("it equals zero");
+		}
+		while ((current as uint) != 0) {
+			drawstr("\n");
+			drawcstr((*current).di.dname);
+			current = (*current).next;
+		}
+	}
 }
-*/
+
+struct filenode {
+	next: *mut filenode,
+	fi: file
+}
+
+impl filenode {
+	pub unsafe fn new(f: file) -> *mut filenode {
+		let (x, y) = heap.alloc(128);
+		let this = filenode{
+			next: 0 as *mut filenode,
+			fi: f
+		};
+		*(x as *mut filenode) = this;
+		x as *mut filenode
+	}
+}
+
+struct filelist {
+	head: *mut filenode
+}
+
+impl filelist {
+	pub unsafe fn new() -> filelist {
+		let name = cstr::from_str(&"");
+		let headfile = file {
+			fname: name,
+			contents: name
+		};
+		let this = filelist{
+			head: filenode::new(headfile)
+		};
+		this
+	}
+
+	pub unsafe fn add_file(&mut self, f: file) {
+		let mut current = self.head;
+		while ((((*current).next) as uint) != 0) {
+			current = (*current).next;
+		}
+		(*current).next = filenode::new(f);
+	}
+
+	pub unsafe fn remove_file(&mut self, fnm: cstr) -> bool {
+		let mut current = self.head;
+		while ((((*current).next) as uint) != 0) {
+			if (((*(*current).next).fi.fname).eq(&fnm)) {
+				let temp = (*(*current).next).next;
+				heap.free((*current).next as *mut u8);
+				(*current).next = temp;
+				return true;
+			};
+			current = (*current).next;
+		}
+		false
+	}
+
+	pub unsafe fn read_file(&mut self, fnm: cstr) -> cstr {
+		let mut current = self.head;
+		while ((((*current).next) as uint) != 0) {
+			if (((*(*current).next).fi.fname).eq(&fnm)) {
+				return (*(*current).next).fi.get_contents();
+			};
+			current = (*current).next;
+		}
+		return cstr::from_str(&"");
+	}
+
+	pub unsafe fn write_file(&mut self, fnm: cstr, word: cstr) -> bool {
+		let mut current = self.head;
+		while ((((*current).next) as uint) != 0) {
+			if (((*(*current).next).fi.fname).eq(&fnm)) {
+				return (*(*current).next).fi.append_cstr(word);
+			};
+			current = (*current).next;
+		}
+		return false;
+	}
+
+	pub unsafe fn get_file(&mut self, fnm: cstr) -> file {
+		let mut current = self.head;
+		while ((((*current).next) as uint) != 0) {
+			if (((*(*current).next).fi.fname).eq(&fnm)) {
+				return (*(*current).next).fi;
+			};
+			current = (*current).next;
+		}
+		return (*self.head).fi;
+	}
+
+	pub unsafe fn print_filenames(&mut self) {
+		let mut current = self.head;
+		while ((((*current).next) as uint) != 0) {
+			drawstr("\n");
+			drawcstr((*(*current).next).fi.fname);
+			current = (*current).next;
+		}
+	}
+}
+
+struct file {
+	fname: cstr,
+	contents: cstr
+}
+
+impl file {
+	pub unsafe fn new(size: uint, name: cstr) -> file {
+		let this = file {
+			fname: name,
+			contents: cstr::new(size)
+		};
+		this
+	}
+
+	pub unsafe fn eq(&mut self, f: file) -> bool {
+		(self.fname.eq(&f.fname)) && (self.contents.eq(&f.contents))
+	}
+
+	pub unsafe fn append_cstr(&mut self, s: cstr) -> bool {
+		if ((self.contents.p_cstr_i + s.len()) >= self.contents.max) {return false;}
+		let mut p = s.p as uint;
+    		while *(p as *char) != '\0'
+    		{	
+			self.contents.add_char(*(p as *u8));
+			p += 1;
+    		}
+		true
+	}
+
+	pub unsafe fn len(&mut self) -> uint {
+		self.contents.p_cstr_i
+	}
+
+	pub unsafe fn get_contents(&mut self) -> cstr {
+		self.contents
+	}
+}
 
 
 struct cstr {
@@ -340,6 +627,17 @@ impl cstr {
 		self.p_cstr_i += 1;
 		*(((self.p as uint)+self.p_cstr_i) as *mut char) = '\0';
 		true
+	}
+
+	unsafe fn place_in_mem(&mut self, x: *mut u8) {
+		let mut p = self.p as uint;
+		let mut xp = x as uint;
+   		while *(p as *char) != '\0'
+    		{	
+			*(xp as *mut char) = *(p as *char);
+			xp += 1;
+			p += 1;
+    		}	
 	}
 
 	unsafe fn delete_char(&mut self) -> bool {

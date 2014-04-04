@@ -115,8 +115,8 @@ pub unsafe fn draw_char(c: char)
 	{
 	    //let addr = START_ADDR + 4*(CURSOR_X + CURSOR_WIDTH - i + SCREEN_WIDTH*(CURSOR_Y + j));
 	    //let addr = START_ADDR + 4*(CURSOR_X + CURSOR_WIDTH + SCREEN_WIDTH*CURSOR_Y) - 4*i + 4*SCREEN_WIDTH*j
-	    if ((map[16-j] >> 4*i) & 1) == 1
-	    //if ((map[j] >> 4*i) & 1) == 1
+	    //if ((map[16-j] >> 4*i) & 1) == 1
+	    if ((map[j] >> 4*i) & 1) == 1
 	    {
 		*(addr as *mut u32) = FG_COLOR;
 	    }
