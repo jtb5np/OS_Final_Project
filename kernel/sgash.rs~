@@ -22,6 +22,7 @@ pub static mut root: *mut dirnode = 0 as *mut dirnode;
 
 pub static mut wd: *mut dirnode = 0 as *mut dirnode;
 
+
 pub fn putchar(key: char) {
     unsafe {
 	/*
@@ -198,16 +199,26 @@ unsafe fn prompt(startup: bool) {
 }
 
 unsafe fn parse() {
-	putstr("\n");
-	putcstr(buffer);
+	//putstr("\n");
+	//putcstr(buffer);
 	//drawstr("\n");
 	//drawcstr(buffer);
 	if (buffer.streq(&"ls")) { 
 	    list_directory(wd);
 	}
 	else if (buffer.streq(&"pwd")) { 
-	    putstr( &"\na\tb") ;
-	    drawstr( &"\na    b") ;
+	    let mut pwd = cstr::new(4096);
+	    let mut slash = cstr::from_str(&"/");
+	    let mut current = wd;
+	    while !(((current as uint) == 0) || ((current as u32) == io::BG_COLOR)) {
+		pwd.concatfront((*current).di.dname);
+		pwd.concatfront(slash);
+		current = (*current).di.parent;
+	    }
+	    putstr("\n");
+	    drawstr("\n");
+	    putcstr(pwd);
+	    drawcstr(pwd);
 	}
 	else {
 		match buffer.getarg(' ', 0) {
@@ -215,27 +226,36 @@ unsafe fn parse() {
 			if(y.streq(&"cat")) {
 			    match buffer.getarg(' ', 1) {
 				Some(x)        => {
-				    if(x.streq(&"a")) { 
-					putstr( &"\nHowdy!"); 
-					drawstr( &"\nHowdy!"); 
-				    }
-				    if(x.streq(&"b")) {
-					putstr( &"\nworld!");
-					drawstr( &"\nworld!");
+				    let catout = read_file(x);
+				    if !(catout.streq(&"")) {
+					putstr("\n");
+					drawstr("\n");
+					putcstr(catout);
+					drawcstr(catout);
 				    }
 				}
 				None        => { }
 			    };
 			}
-			else if(y.streq(&"open")) {
-			    let mut i: uint = 0;
-			    let name = cstr::from_str(&"root");
-			    let name2 = cstr::from_str(&"otherdir");
-			    create_file(wd, name);
-			    create_directory(wd, name2);
-			    delete_directory((*wd).di.get_child(name2));
-			    delete_file(wd, name);
-			    list_directory(wd);
+			else if(y.streq(&"mv")) {
+			    match buffer.getarg(' ', 1) {
+				Some(filename)        => {
+				    match buffer.getarg(' ', 2) {
+					Some(dir)        => {
+						let mut subdir = (*wd).di.get_child(dir);
+				    		if ((subdir as uint) != 0) {
+							(*subdir).di.add_file((*wd).di.get_file(filename));
+							(*wd).di.files.remove_file_nofree(filename);
+						}
+						else {
+							(*wd).di.files.set_new_name(filename, dir);
+						}
+					}
+					None        => { }
+				    };
+				}
+				None        => { }
+			    };
 			}
 			else if(y.streq(&"echo")) {
 				let (a,b) = buffer.splitonce(' ');
@@ -251,7 +271,7 @@ unsafe fn parse() {
 			    }
 			    else {
 			    	let subdir = (*wd).di.get_child(dir);
-				if ((subdir as uint) != 0) {
+				if !(((subdir as uint) == 0) || ((subdir as u32) == io::BG_COLOR)) {
 					wd = subdir;
 				}
 				else {
@@ -261,20 +281,43 @@ unsafe fn parse() {
 			    }
 			}
 			else if(y.streq(&"rm")) {
-			    putstr(&"\nTEST YO");
-			    drawstr(&"\nTEST YO");
+			    match buffer.getarg(' ', 1) {
+				Some(x)        => {
+				    if !(delete_file(wd, x) || delete_directory((*wd).di.get_child(x))) {
+					putstr("\nNo such file/directory or directory isn't empty.");
+					drawstr("\nNo such file/directory or directory isn't empty.");
+				    }
+				}
+				None        => { }
+			    };
 			}
 			else if(y.streq(&"mkdir")) {
 			    let (cmd, dir) = buffer.splitonce(' ');
 			    create_directory(wd, dir);
 			}
 			else if(y.streq(&"wr")) {
-			    putstr(&"\nTEST YO");
-			    drawstr(&"\nTEST YO");
+			    match buffer.getarg(' ', 1) {
+				Some(filename)        => {
+				    match buffer.getarg(' ', 2) {
+					Some(words)        => {
+						let mut file = (*wd).di.get_file(filename);
+				    		if !(file.fname.streq(&"")) {
+							write_file(filename, words);
+						}
+						else {
+							create_file(wd, filename);
+							write_file(filename, words);
+						}
+					}
+					None        => { }
+				    };
+				}
+				None        => { }
+			    };
 			}
 			else {
-			    putstr(&"\nNO");
-			    drawstr(&"\nNO");
+			    putstr(&"\nTry again.");
+			    drawstr(&"\nTry again.");
 			}
 		    }
 		    None        => { }
@@ -398,7 +441,7 @@ struct dirnode {
 
 impl dirnode {
 	pub unsafe fn new(d: directory) -> *mut dirnode {
-		let (x, y) = heap.alloc(256);
+		let (x, y) = heap.alloc(64);
 		let this = dirnode{
 			next: 0 as *mut dirnode,
 			di: d
@@ -490,7 +533,7 @@ struct filenode {
 
 impl filenode {
 	pub unsafe fn new(f: file) -> *mut filenode {
-		let (x, y) = heap.alloc(128);
+		let (x, y) = heap.alloc(64);
 		let this = filenode{
 			next: 0 as *mut filenode,
 			fi: f
@@ -539,6 +582,19 @@ impl filelist {
 		false
 	}
 
+	pub unsafe fn remove_file_nofree(&mut self, fnm: cstr) -> bool {
+		let mut current = self.head;
+		while !(((((*current).next) as uint) == 0) || ((((*current).next) as u32) == io::BG_COLOR)) {
+			if (((*(*current).next).fi.fname).eq(&fnm)) {
+				let temp = (*(*current).next).next;
+				(*current).next = temp;
+				return true;
+			};
+			current = (*current).next;
+		}
+		false
+	}
+
 	pub unsafe fn read_file(&mut self, fnm: cstr) -> cstr {
 		let mut current = self.head;
 		while !(((((*current).next) as uint) == 0) || ((((*current).next) as u32) == io::BG_COLOR)) {
@@ -579,6 +635,16 @@ impl filelist {
 			putcstr((*(*current).next).fi.fname);	
 			drawstr("\n");
 			drawcstr((*(*current).next).fi.fname);
+			current = (*current).next;
+		}
+	}
+
+	pub unsafe fn set_new_name(&mut self, oldname: cstr, newname: cstr) {
+		let mut current = self.head;
+		while !(((((*current).next) as uint) == 0) || ((((*current).next) as u32) == io::BG_COLOR)){
+			if (((*(*current).next).fi.fname).eq(&oldname)) {
+				(*(*current).next).fi.fname = newname;
+			};
 			current = (*current).next;
 		}
 	}
@@ -669,6 +735,24 @@ impl cstr {
 		*(((self.p as uint)+self.p_cstr_i) as *mut u8) = x;
 		self.p_cstr_i += 1;
 		*(((self.p as uint)+self.p_cstr_i) as *mut char) = '\0';
+		true
+	}
+
+	unsafe fn concatfront(&mut self, word: cstr) -> bool {
+		if ((self.p_cstr_i + word.len()) >= self.max) {return false;}
+		let mut p = (word.p as uint) + word.p_cstr_i - 1;
+    		while p >= (word.p as uint)
+    		{	
+			let mut i: uint = self.p_cstr_i + 1;
+			while i > 0 {
+				*(((self.p as uint)+i) as *mut u8) = *(((self.p as uint)+i-1) as *mut u8);
+				i -= 1;
+			}
+			self.p_cstr_i += 1;
+			*(((self.p as uint)+self.p_cstr_i) as *mut char) = '\0';
+			*(self.p as *mut u8) = *(p as *mut u8);
+			p -= 1;
+    		}
 		true
 	}
 
