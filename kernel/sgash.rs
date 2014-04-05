@@ -198,13 +198,12 @@ unsafe fn prompt(startup: bool) {
 }
 
 unsafe fn parse() {
-	//putstr("\n");
-	//putcstr(buffer);
+	putstr("\n");
+	putcstr(buffer);
 	//drawstr("\n");
 	//drawcstr(buffer);
 	if (buffer.streq(&"ls")) { 
-	    putstr( &"\na\tb") ;
-	    drawstr( &"\na    b") ;
+	    list_directory(wd);
 	}
 	else if (buffer.streq(&"pwd")) { 
 	    putstr( &"\na\tb") ;
@@ -216,27 +215,25 @@ unsafe fn parse() {
 			if(y.streq(&"cat")) {
 			    match buffer.getarg(' ', 1) {
 				Some(x)        => {
-				    if(x.streq(&"a")) { 
-					putstr( &"\nHowdy!"); 
-					drawstr( &"\nHowdy!"); 
-				    }
-				    if(x.streq(&"b")) {
-					putstr( &"\nworld!");
-					drawstr( &"\nworld!");
+				    let catout = read_file(x);
+				    if !(catout.streq(&"")) {
+					putstr("\n");
+					drawstr("\n");
+					putcstr(catout);
+					drawcstr(catout);
 				    }
 				}
 				None        => { }
 			    };
 			}
 			else if(y.streq(&"open")) {
+			    let mut i: uint = 0;
 			    let name = cstr::from_str(&"root");
 			    let name2 = cstr::from_str(&"otherdir");
 			    create_file(wd, name);
-			    //delete_file(wd, name);
-			    if !(write_file(name, name2)) {
-				drawstr("lsakdjghaskdfh");
-			    }
-			    drawcstr(read_file(name));
+			    create_directory(wd, name2);
+			    delete_directory((*wd).di.get_child(name2));
+			    delete_file(wd, name);
 			    list_directory(wd);
 			}
 			else if(y.streq(&"echo")) {
@@ -247,16 +244,28 @@ unsafe fn parse() {
 				drawcstr(b);
 			}
 			else if(y.streq(&"cd")) {
-			    putstr(&"\nTEST YO");
-			    drawstr(&"\nTEST YO");
+			    let (cmd,dir) = buffer.splitonce(' ');
+			    if (dir.streq("")) {
+				wd = root;
+			    }
+			    else {
+			    	let subdir = (*wd).di.get_child(dir);
+				if ((subdir as uint) != 0) {
+					wd = subdir;
+				}
+				else {
+					putstr("\nThat directory doesn't exist.");
+					drawstr("\nThat directory doesn't exist.");
+				}
+			    }
 			}
 			else if(y.streq(&"rm")) {
 			    putstr(&"\nTEST YO");
 			    drawstr(&"\nTEST YO");
 			}
 			else if(y.streq(&"mkdir")) {
-			    putstr(&"\nTEST YO");
-			    drawstr(&"\nTEST YO");
+			    let (cmd, dir) = buffer.splitonce(' ');
+			    create_directory(wd, dir);
 			}
 			else if(y.streq(&"wr")) {
 			    putstr(&"\nTEST YO");
@@ -292,6 +301,25 @@ unsafe fn delete_file(dir: *mut dirnode, name: cstr) -> bool {
 
 unsafe fn list_directory(dir: *mut dirnode) {
 	(*dir).di.directory_file_list()
+}
+
+unsafe fn create_directory(parent: *mut dirnode, dnm: cstr) {
+	let mut newdir = directory::new(dnm, parent);
+	(*parent).di.add_dir(newdir);
+}
+
+unsafe fn delete_directory(dir: *mut dirnode) -> bool {
+	if ((*dir).di.empty()) {
+		heap.free((*dir).di.files.head as *mut u8);
+		(*dir).di.dname.destroy();
+		(*(*dir).di.parent).di.remove_dir((*dir).di.dname);
+		return true;
+	}
+	false
+}
+
+unsafe fn get_directory(parent: *mut dirnode, dnm: cstr) -> *mut dirnode {
+	(*parent).di.get_child(dnm)
 }
 
 
@@ -355,6 +383,11 @@ impl directory {
 		self.files.print_filenames();
 		self.child_dir.print_dirnames();
 	}
+
+	pub unsafe fn empty(&mut self) -> bool {
+		(self.files.empty()) && (self.child_dir.empty())
+	}
+
 }
 
 struct dirnode {
@@ -388,11 +421,11 @@ impl dirlist {
 
 	pub unsafe fn add_dir(&mut self, d: directory) {
 		let mut current = self.head;
-		if ((current as uint) == 0) {
+		if (((current as uint) == 0) || ((current as u32) == io::BG_COLOR)) {
 			self.head = dirnode::new(d);
 		}
 		else {
-			while ((((*current).next) as uint) != 0) {
+			while !((((*current).next as uint) == 0) || (((*current).next as u32) == io::BG_COLOR)) {
 				current = (*current).next;
 			}
 			(*current).next = dirnode::new(d);
@@ -410,7 +443,7 @@ impl dirlist {
 			self.head = temp;
 			return true;
 		};
-		while ((((*current).next) as uint) != 0) {
+		while !((((*current).next as uint) == 0) || (((*current).next as u32) == io::BG_COLOR)) {
 			if (((*(*current).next).di.dname).eq(&dnm)) {
 				let temp = (*(*current).next).next;
 				heap.free((*current).next as *mut u8);
@@ -424,7 +457,7 @@ impl dirlist {
 
 	pub unsafe fn get_dirnode(&mut self, dnm: cstr) -> *mut dirnode {
 		let mut current = self.head;
-		while ((current as uint) != 0) {
+		while !(((current as uint) == 0) || ((current as u32) == io::BG_COLOR)) {
 			if (((*current).di.dname).eq(&dnm)) {
 				return current;
 			};
@@ -435,14 +468,17 @@ impl dirlist {
 
 	pub unsafe fn print_dirnames(&mut self) {
 		let mut current = self.head;
-		if (current as uint) == 0 {
-			drawstr("it equals zero");
-		}
-		while ((current as uint) != 0) {
+		while !(((current as uint) == 0) || ((current as u32) == io::BG_COLOR)) {
+			putstr("\n");
+			putcstr((*current).di.dname);		
 			drawstr("\n");
 			drawcstr((*current).di.dname);
 			current = (*current).next;
 		}
+	}
+
+	pub unsafe fn empty(&mut self) -> bool {
+		(((self.head as uint) == 0) || ((self.head as u32) == io::BG_COLOR))
 	}
 }
 
@@ -482,7 +518,7 @@ impl filelist {
 
 	pub unsafe fn add_file(&mut self, f: file) {
 		let mut current = self.head;
-		while ((((*current).next) as uint) != 0) {
+		while !(((((*current).next) as uint) == 0) || ((((*current).next) as u32) == io::BG_COLOR)) {
 			current = (*current).next;
 		}
 		(*current).next = filenode::new(f);
@@ -490,7 +526,7 @@ impl filelist {
 
 	pub unsafe fn remove_file(&mut self, fnm: cstr) -> bool {
 		let mut current = self.head;
-		while ((((*current).next) as uint) != 0) {
+		while !(((((*current).next) as uint) == 0) || ((((*current).next) as u32) == io::BG_COLOR)) {
 			if (((*(*current).next).fi.fname).eq(&fnm)) {
 				let temp = (*(*current).next).next;
 				heap.free((*current).next as *mut u8);
@@ -504,7 +540,7 @@ impl filelist {
 
 	pub unsafe fn read_file(&mut self, fnm: cstr) -> cstr {
 		let mut current = self.head;
-		while ((((*current).next) as uint) != 0) {
+		while !(((((*current).next) as uint) == 0) || ((((*current).next) as u32) == io::BG_COLOR)) {
 			if (((*(*current).next).fi.fname).eq(&fnm)) {
 				return (*(*current).next).fi.get_contents();
 			};
@@ -515,7 +551,7 @@ impl filelist {
 
 	pub unsafe fn write_file(&mut self, fnm: cstr, word: cstr) -> bool {
 		let mut current = self.head;
-		while ((((*current).next) as uint) != 0) {
+		while !(((((*current).next) as uint) == 0) || ((((*current).next) as u32) == io::BG_COLOR)) {
 			if (((*(*current).next).fi.fname).eq(&fnm)) {
 				return (*(*current).next).fi.append_cstr(word);
 			};
@@ -526,7 +562,7 @@ impl filelist {
 
 	pub unsafe fn get_file(&mut self, fnm: cstr) -> file {
 		let mut current = self.head;
-		while ((((*current).next) as uint) != 0) {
+		while !(((((*current).next) as uint) == 0) || ((((*current).next) as u32) == io::BG_COLOR)){
 			if (((*(*current).next).fi.fname).eq(&fnm)) {
 				return (*(*current).next).fi;
 			};
@@ -537,11 +573,17 @@ impl filelist {
 
 	pub unsafe fn print_filenames(&mut self) {
 		let mut current = self.head;
-		while ((((*current).next) as uint) != 0) {
+		while !(((((*current).next) as uint) == 0) || ((((*current).next) as u32) == io::BG_COLOR)) {
+			putstr("\n");
+			putcstr((*(*current).next).fi.fname);	
 			drawstr("\n");
 			drawcstr((*(*current).next).fi.fname);
 			current = (*current).next;
 		}
+	}
+
+	pub unsafe fn empty(&mut self) -> bool {
+		(((((*self.head).next) as uint) == 0) || ((((*self.head).next) as u32) == io::BG_COLOR))
 	}
 }
 

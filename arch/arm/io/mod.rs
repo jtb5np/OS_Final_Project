@@ -118,11 +118,15 @@ pub unsafe fn draw_char(c: char)
 	    //if ((map[16-j] >> 4*i) & 1) == 1
 	    if ((map[j] >> 4*i) & 1) == 1
 	    {
-		*(addr as *mut u32) = FG_COLOR;
+		if ((*(addr as *mut u32) == FG_COLOR) || (*(addr as *mut u32) == BG_COLOR)) {
+			*(addr as *mut u32) = FG_COLOR;
+		}
 	    }
 	    else
 	    {
-		*(addr as *mut u32) = BG_COLOR;
+		if ((*(addr as *mut u32) == FG_COLOR) || (*(addr as *mut u32) == BG_COLOR)) {
+			*(addr as *mut u32) = BG_COLOR;
+		}
 	    }
 	    
 	    addr-= 4;

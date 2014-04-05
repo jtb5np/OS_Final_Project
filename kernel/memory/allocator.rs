@@ -93,7 +93,11 @@ impl BuddyAlloc {
     #[inline]
     fn offset(&self, index: uint, level: uint) -> uint {
         /* unsafe { - unnecessary */
-            (index + 1 - (1 << (self.order - level))) << level
+            /*if (((index + 1 - (1 << (self.order - level))) << level) >= 1024*1024) || (((index + 1 - (1 << (self.order - level))) << level) <= (1024*1024 + 800*600*4)) {
+		return ((1024*1024 + 800*600*4) + ((index + 1 - (1 << (self.order - level))) << level));
+	}*/
+	((1024*1024 + 800*600*4) + ((index + 1 - (1 << (self.order - level))) << level))
+	//((1 << 22) + ((index + 1 - (1 << (self.order - level))) << level))
         /* } */
     }
 
@@ -124,6 +128,7 @@ impl BuddyAlloc {
                             _ => break
                         }
                     }
+		    
                     return (
                         self.offset(index, level),
                         1 << lg2_size
