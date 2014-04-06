@@ -18,6 +18,7 @@ pub static mut buffer: cstr = cstr {
 				max: 0
 			      };
 
+
 pub static mut root: *mut dirnode = 0 as *mut dirnode;
 
 pub static mut wd: *mut dirnode = 0 as *mut dirnode;
@@ -74,8 +75,7 @@ pub unsafe fn putcstr(s: cstr)
 pub unsafe fn parsekey(x: char) {
 	let x = x as u8;
 	// Set this to false to learn the keycodes of various keys!
-	// Key codes are printed backwards because life is hard
-		
+	// Key codes are printed backwards because life is hard	
 	if (true) {
 		match x { 
 			13		=>	{ 
@@ -90,7 +90,10 @@ pub unsafe fn parsekey(x: char) {
 					backspace();
 				}
 			}
-			_		=>	{ 
+			0x1B	=>	{
+				
+			}
+			_		=>	{
 				if (buffer.add_char(x)) { 
 					putchar(x as char);
 					drawchar(x as char);
@@ -203,7 +206,7 @@ unsafe fn parse() {
 	//putcstr(buffer);
 	//drawstr("\n");
 	//drawcstr(buffer);
-	if (buffer.streq(&"ls")) { 
+	if (buffer.streq(&"ls")) {
 	    list_directory(wd);
 	}
 	else if (buffer.streq(&"pwd")) { 
@@ -229,9 +232,9 @@ unsafe fn parse() {
 				    let catout = read_file(x);
 				    if !(catout.streq(&"")) {
 					putstr("\n");
-					drawstr("\n");
-					putcstr(catout);
-					drawcstr(catout);
+				  	drawstr("\n");
+				    	putcstr(catout);
+				    	drawcstr(catout);
 				    }
 				}
 				None        => { }
@@ -765,6 +768,16 @@ impl cstr {
 			xp += 1;
 			p += 1;
     		}	
+	}
+
+	unsafe fn copy(&mut self, word: cstr) {
+		self.reset();
+		let mut p = word.p as uint;
+   		while *(p as *char) != '\0'
+    		{	
+			self.add_char(*(p as *u8));
+			p += 1;
+    		}
 	}
 
 	unsafe fn delete_char(&mut self) -> bool {

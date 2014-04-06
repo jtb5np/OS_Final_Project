@@ -18,6 +18,12 @@ pub static mut buffer: cstr = cstr {
 				max: 0
 			      };
 
+/*pub static mut buffer2: cstr = cstr {
+				p: 0 as *mut u8,
+				p_cstr_i: 0,
+				max: 0
+			      };*/
+
 pub static mut root: *mut dirnode = 0 as *mut dirnode;
 
 pub static mut wd: *mut dirnode = 0 as *mut dirnode;
@@ -74,8 +80,7 @@ pub unsafe fn putcstr(s: cstr)
 pub unsafe fn parsekey(x: char) {
 	let x = x as u8;
 	// Set this to false to learn the keycodes of various keys!
-	// Key codes are printed backwards because life is hard
-		
+	// Key codes are printed backwards because life is hard	
 	if (true) {
 		match x { 
 			13		=>	{ 
@@ -90,7 +95,10 @@ pub unsafe fn parsekey(x: char) {
 					backspace();
 				}
 			}
-			_		=>	{ 
+			0x1B	=>	{
+				
+			}
+			_		=>	{
 				if (buffer.add_char(x)) { 
 					putchar(x as char);
 					drawchar(x as char);
@@ -184,6 +192,7 @@ fn screen() {
 
 pub unsafe fn init() {
     buffer = cstr::new(256);
+    //buffer2 = cstr::new(4096);
     let root_name = cstr::from_str(&"root");
     let root_dir = directory::new(root_name, 0 as *mut dirnode);
     root = dirnode::new(root_dir);
@@ -203,7 +212,7 @@ unsafe fn parse() {
 	//putcstr(buffer);
 	//drawstr("\n");
 	//drawcstr(buffer);
-	if (buffer.streq(&"ls")) { 
+	if (buffer.streq(&"ls")) {
 	    list_directory(wd);
 	}
 	else if (buffer.streq(&"pwd")) { 
@@ -229,9 +238,9 @@ unsafe fn parse() {
 				    let catout = read_file(x);
 				    if !(catout.streq(&"")) {
 					putstr("\n");
-					drawstr("\n");
-					putcstr(catout);
-					drawcstr(catout);
+				  	drawstr("\n");
+				    	putcstr(catout);
+				    	drawcstr(catout);
 				    }
 				}
 				None        => { }
@@ -316,13 +325,14 @@ unsafe fn parse() {
 			    };
 			}
 			else {
-			    putstr(&"\nTry again.");
-			    drawstr(&"\nTry again.");
+			    putstr(&"\nNO");
+			    drawstr(&"\nNO");
 			}
 		    }
 		    None        => { }
 		};
 	};
+	//buffer2.copy(buffer);
 	buffer.reset();
 }
 
@@ -765,6 +775,16 @@ impl cstr {
 			xp += 1;
 			p += 1;
     		}	
+	}
+
+	unsafe fn copy(&mut self, word: cstr) {
+		self.reset();
+		let mut p = word.p as uint;
+   		while *(p as *char) != '\0'
+    		{	
+			self.add_char(*(p as *u8));
+			p += 1;
+    		}
 	}
 
 	unsafe fn delete_char(&mut self) -> bool {
