@@ -88,7 +88,6 @@ pub unsafe fn parsekey(x: char) {
 			9		=>	{
 				let win = winlist.get_bot();
 				bring_window_to_top(win.id);
-				io::draw_cursor();
 			}
 			92		=>	{
 				win_count += 1;
@@ -204,7 +203,8 @@ unsafe fn parse() {
 	    putstr("clicked");
 	}*/
 	else if (buffer.streq(&"movewin")) {
-		move_window((*winlist.head).win.id, (*winlist.head).win.x + 10, (*winlist.head).win.y + 10);
+		let top_win = (*winlist.get_top_win());
+		move_window(top_win.win.id, top_win.win.x + 10, top_win.win.y + 10);
 	}
 	else {
 		match buffer.getarg(' ', 0) {
@@ -1095,6 +1095,17 @@ impl windowlist {
 	pub unsafe fn get_bot(&mut self) -> window {
 		let current = self.head;
 		return (*current).win
+	}
+
+	pub unsafe fn get_top_win(&mut self) -> *mut windownode {
+		if ((self.head as uint) == 0) {
+			return 0 as *mut windownode;
+		}
+		let mut current = self.head;
+		while (((*current).next as uint) != 0) {
+			current = (*current).next;
+		}
+		current
 	}
 
 	pub unsafe fn draw_all(&mut self) {

@@ -27,6 +27,7 @@ pub static mut arr1: bool = false;
 
 pub static mut arr2: bool = false;
 
+pub static mut win_count: uint = 0;
 
 pub fn putchar(key: char) {
     unsafe {
@@ -86,8 +87,13 @@ pub unsafe fn parsekey(x: char) {
 			}
 			9		=>	{
 				let win = winlist.get_bot();
-				bring_window_to_top(win.name);
-				io::draw_cursor();
+				bring_window_to_top(win.id);
+			}
+			92		=>	{
+				win_count += 1;
+			    	let mut w = window::new(cstr::from_str("Window"), io::CURSOR_X, io::CURSOR_Y, 200, 200, win_count, true);
+	   			winlist.add_win_front(w);
+	    			bring_window_to_top(w.id);
 			}
 			0x1B	=>	{
 				arr1 = true;
@@ -185,7 +191,7 @@ unsafe fn parse() {
 	    }
 	    putstr("\n");
 	    putcstr(pwd);
-	}
+	}/*
 	else if (buffer.streq(&"click")) {
 	    let mut w = window::new(cstr::from_str("Window 1"), 200, 50, 200, 200, true);
 	    let mut w2 = window::new(cstr::from_str("Window 2"), 300, 200, 200, 150, true);
@@ -195,9 +201,9 @@ unsafe fn parse() {
 	    //remove_window(w.name);
 	    putstr("\n");
 	    putstr("clicked");
-	}
+	}*/
 	else if (buffer.streq(&"movewin")) {
-		move_window((*winlist.head).win.name, (*winlist.head).win.x + 10, (*winlist.head).win.y + 10);
+		move_window((*winlist.head).win.id, (*winlist.head).win.x + 10, (*winlist.head).win.y + 10);
 	}
 	else {
 		match buffer.getarg(' ', 0) {
@@ -868,14 +874,14 @@ impl cstr {
 }
 
 
-pub unsafe fn move_window(wname: cstr, x: u32, y: u32) {
-	let wndw = winlist.get_windownode(wname);
+pub unsafe fn move_window(wid: uint, x: u32, y: u32) {
+	let wndw = winlist.get_windownode(wid);
 	(*wndw).win.blank();
 	(*wndw).win.mov(x, y);
 }
 
-pub unsafe fn bring_window_to_top(wname: cstr) {
-	winlist.bring_to_top(wname);
+pub unsafe fn bring_window_to_top(wid: uint) {
+	winlist.bring_to_top(wid);
 }
 
 struct window {
@@ -884,18 +890,20 @@ struct window {
 	y: u32,
 	width: u32,
 	height: u32,
-	visible: bool
+	visible: bool,
+	id: uint
 }
 
 impl window {
-	pub unsafe fn new(name: cstr, x: u32, y: u32, width: u32, height: u32, visible: bool) -> window {
+	pub unsafe fn new(name: cstr, x: u32, y: u32, width: u32, height: u32, id: uint, visible: bool) -> window {
 		let this = window {
 			name: name,
 			x: x,
 			y: y,
 			width: width,
 			height: height,
-			visible: visible
+			visible: visible,
+			id: id
 		};
 		this
 	}
@@ -963,10 +971,10 @@ impl windowlist {
 		this
 	}
 
-	pub unsafe fn get_windownode(&mut self, name: cstr) -> *mut windownode {
+	pub unsafe fn get_windownode(&mut self, id: uint) -> *mut windownode {
 		let mut current = self.head;
 		while ((current as uint) != 0) {
-			if ((*current).win.name.eq(&name)) {
+			if ((*current).win.id == id) {
 				return current;
 			}
 			current = (*current).next;
@@ -975,7 +983,7 @@ impl windowlist {
 	}
 
 	pub unsafe fn add_win_front(&mut self, w: window) -> bool {
-		if ((self.get_windownode(w.name) as uint) != 0) { return false; }
+		if ((self.get_windownode(w.id) as uint) != 0) { return false; }
 		let mut winnode = windownode::new(w);
 		if ((self.head as uint) == 0) {
 			self.head = winnode;
@@ -989,7 +997,7 @@ impl windowlist {
 	}
 
 	pub unsafe fn add_win_back(&mut self, w: window) -> bool {
-		if ((self.get_windownode(w.name) as uint) != 0) { return false; }
+		if ((self.get_windownode(w.id) as uint) != 0) { return false; }
 		let mut winnode = windownode::new(w);
 		if ((self.head as uint) == 0) {
 			self.head = winnode;
@@ -1003,12 +1011,12 @@ impl windowlist {
 		return true;
 	}
 
-	pub unsafe fn remove_win(&mut self, name: cstr) -> bool {
+	pub unsafe fn remove_win(&mut self, id: uint) -> bool {
 		let mut current = self.head;
 		if ((current as uint) == 0) {
 			return false;
 		}
-		if (((*current).win.name).eq(&name)) {
+		if (((*current).win.id) == id) {
 			(*current).win.blank();
 			let temp = (*current).next;
 			heap.free(current as *mut u8);
@@ -1016,7 +1024,7 @@ impl windowlist {
 			return true;
 		};
 		while !((((*current).next as uint) == 0) || (((*current).next as u32) == io::BG_COLOR)) {
-			if (((*(*current).next).win.name).eq(&name)) {
+			if (((*(*current).next).win.id) == id) {
 				(*current).win.blank();
 				let temp = (*(*current).next).next;
 				heap.free((*current).next as *mut u8);
@@ -1028,12 +1036,12 @@ impl windowlist {
 		false
 	}
 
-	pub unsafe fn bring_to_top(&mut self, name: cstr) -> bool {
+	pub unsafe fn bring_to_top(&mut self, id: uint) -> bool {
 		let mut current = self.head;
 		if ((current as uint) == 0) {
 			return false;
 		}
-		if (((*current).win.name).eq(&name)) {
+		if (((*current).win.id) == id) {
 			let temp = (*current).next;
 			let moving_node = current;
 			self.head = temp;
@@ -1051,7 +1059,7 @@ impl windowlist {
 			return true;
 		};
 		while !((((*current).next as uint) == 0)) {
-			if (((*(*current).next).win.name).eq(&name)) {
+			if (((*(*current).next).win.id) == id) {
 				let temp = (*(*current).next).next;
 				let moving_node = (*current).next;
 				(*current).next = temp;
@@ -1086,6 +1094,17 @@ impl windowlist {
 	pub unsafe fn get_bot(&mut self) -> window {
 		let current = self.head;
 		return (*current).win
+	}
+
+	pub unsafe fn get_top_win(&mut self) -> *mut windownode {
+		if ((self.head as uint) == 0) {
+			return 0 as *mut windownode;
+		}
+		let mut current = self.head;
+		while (((*current).next as uint) != 0) {
+			current = (*current).next;
+		}
+		current
 	}
 
 	pub unsafe fn draw_all(&mut self) {
