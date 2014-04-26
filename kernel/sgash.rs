@@ -191,17 +191,7 @@ unsafe fn parse() {
 	    }
 	    putstr("\n");
 	    putcstr(pwd);
-	}/*
-	else if (buffer.streq(&"click")) {
-	    let mut w = window::new(cstr::from_str("Window 1"), 200, 50, 200, 200, true);
-	    let mut w2 = window::new(cstr::from_str("Window 2"), 300, 200, 200, 150, true);
-	    winlist.add_win_front(w);
-	    winlist.add_win_front(w2);
-	    bring_window_to_top(w.name);
-	    //remove_window(w.name);
-	    putstr("\n");
-	    putstr("clicked");
-	}*/
+	}
 	else if (buffer.streq(&"movewin")) {
 		let top_win = (*winlist.get_top_win());
 		move_window(top_win.win.id, top_win.win.x + 10, top_win.win.y + 10);
@@ -297,7 +287,6 @@ unsafe fn parse() {
 			}
 			else {
 			    putstr(&"\nNO");
-			    //drawstr(&"\nNO");
 			}
 		    }
 		    None        => { }
@@ -1114,5 +1103,25 @@ impl windowlist {
 			(*current).win.draw();
 			current = (*current).next;
 		}
+	}
+}
+
+struct taskbar {
+	name: cstr
+}
+
+impl taskbar {
+	pub unsafe fn new() -> taskbar {
+		let this = taskbar {
+		name: cstr::from_str(&"Menu"),
+		};
+		this
+	}
+
+	pub unsafe fn draw(&mut self) {
+		io::fill_box(1, 450, 635, 27, 0x666666);
+		io::draw_box(0, 449, 637, 29, 0x000000);
+		drawcstr_at_coord(self.name, 11, 456, 0x000000);
+		io::draw_line(57, 450, 57, 478, 0x000000);
 	}
 }

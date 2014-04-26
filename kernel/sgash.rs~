@@ -203,7 +203,8 @@ unsafe fn parse() {
 	    putstr("clicked");
 	}*/
 	else if (buffer.streq(&"movewin")) {
-		move_window((*winlist.head).win.id, (*winlist.head).win.x + 10, (*winlist.head).win.y + 10);
+		let top_win = (*winlist.get_top_win());
+		move_window(top_win.win.id, top_win.win.x + 10, top_win.win.y + 10);
 	}
 	else {
 		match buffer.getarg(' ', 0) {
