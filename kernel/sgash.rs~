@@ -24,7 +24,7 @@ pub static mut root: *mut dirnode = 0 as *mut dirnode;
 pub static mut wd: *mut dirnode = 0 as *mut dirnode;
 
 pub static mut tbar: taskbar = taskbar {
-					id: 0
+					menu_open: false
 				};
 
 pub static mut arr1: bool = false;
@@ -94,10 +94,19 @@ pub unsafe fn parsekey(x: char) {
 				bring_window_to_top(win.id);
 			}
 			92		=>	{
-				win_count += 1;
-			    	let mut w = window::new(cstr::from_str("Window"), io::CURSOR_X, io::CURSOR_Y, 200, 200, win_count, true);
-	   			winlist.add_win_front(w);
-	    			bring_window_to_top(w.id);
+				if (!tbar.menu_open && cursor_in(0, 449, 57, 29)) {
+					tbar.open_menu();
+				}
+				else if (cursor_in(0, 449, 57, 29)) {
+					tbar.close_menu();
+					tbar.clear_menu();
+				}
+				else if (tbar.menu_open && cursor_in(0, 428, 100, 20))
+				{
+					win_count += 1;
+			    		let mut w = window::new(cstr::from_str("Window"), 50 + 10*win_count, 50 + 10*win_count, 200, 200, win_count, true);
+	   				winlist.add_win_back(w);
+				}
 			}
 			0x1B	=>	{
 				arr1 = true;
@@ -139,7 +148,6 @@ pub unsafe fn parsekey(x: char) {
 			_		=>	{
 				if (buffer.add_char(x)) { 
 					putchar(x as char);
-					//drawchar(x as char);
 				}
 			}
 		}
@@ -305,6 +313,10 @@ unsafe fn paint() {
 	winlist.draw_all();
 	tbar.draw();
 	io::draw_cursor();
+}
+
+unsafe fn cursor_in(x: u32, y: u32, width: u32, height: u32) -> bool {
+	(io::CURSOR_X > x) && (io::CURSOR_X < (x + width)) && (io::CURSOR_Y > y) && (io::CURSOR_Y < (y + height))
 }
 
 unsafe fn read_file(filename: cstr) -> cstr {
@@ -873,8 +885,10 @@ impl cstr {
 
 pub unsafe fn move_window(wid: uint, x: u32, y: u32) {
 	let wndw = winlist.get_windownode(wid);
-	(*wndw).win.blank();
-	(*wndw).win.mov(x, y);
+	if ((wndw as uint) != 0) {
+		(*wndw).win.blank();
+		(*wndw).win.mov(x, y);
+	}
 }
 
 pub unsafe fn bring_window_to_top(wid: uint) {
@@ -1114,21 +1128,41 @@ impl windowlist {
 }
 
 struct taskbar {
-	id: uint
+	menu_open: bool
 }
 
 impl taskbar {
 	pub unsafe fn new() -> taskbar {
 		let this = taskbar {
-			id: 0
+			menu_open: false
 		};
 		this
 	}
 
+	pub unsafe fn open_menu(&mut self) {
+		self.menu_open = true;
+	}
+
+	pub unsafe fn close_menu(&mut self) {
+		self.menu_open = false;
+	}
+
+	pub unsafe fn clear_menu(&mut self) {
+		io::fill_box(0, 428, 100, 20, io::BG_COLOR);
+	}
+
 	pub unsafe fn draw(&mut self) {
+		let menu = cstr::from_str(&"Menu");
 		io::fill_box(1, 450, 635, 27, 0x666666);
 		io::draw_box(0, 449, 637, 29, 0x000001);
-		drawcstr_at_coord(cstr::from_str(&"Menu"), 11, 456, 0x000001);
 		io::draw_line(57, 450, 57, 478, 0x000001);
+		if (self.menu_open) {
+			let open_win = cstr::from_str(&"Open Window");
+			io::fill_box(0, 428, 100, 20, 0x888888);
+			io::draw_box(0, 428, 100, 20, 0x000000);
+			drawcstr_at_coord(open_win, 6, 430, 0x000000);
+		}
+		drawcstr_at_coord(menu, 11, 456, 0x000001);
+		menu.destroy();
 	}
 }
