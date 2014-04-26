@@ -45,23 +45,12 @@ fn putstr(msg: &str) {
     }
 }
 
-pub unsafe fn drawstr(msg: &str) {
-    let old_fg = super::super::io::FG_COLOR;
-    let mut x: u32 = 0x6699AAFF;
-    for c in slice::iter(as_bytes(msg)) {
-	x = (x << 8) + (x >> 24); 
-	super::super::io::set_fg(x);
-	drawchar(*c as char);
-    }
-    super::super::io::set_fg(old_fg);
-}
-
-pub unsafe fn drawcstr(s: cstr)
+pub unsafe fn putcstr(s: cstr)
 {
     let mut p = s.p as uint;
     while *(p as *char) != '\0'
     {	
-	drawchar(*(p as *char));
+	putchar(*(p as *char));
 	p += 1;
     }
 }
@@ -75,16 +64,6 @@ pub unsafe fn drawcstr_at_coord(s: cstr, x: u32, y: u32, color: u32)
 	drawchar_at_coord(*(p as *char), x+i*io::CURSOR_WIDTH, y, color);
 	p += 1;
 	i += 1;
-    }
-}
-
-pub unsafe fn putcstr(s: cstr)
-{
-    let mut p = s.p as uint;
-    while *(p as *char) != '\0'
-    {	
-	putchar(*(p as *char));
-	p += 1;
     }
 }
 
@@ -122,48 +101,28 @@ pub unsafe fn parsekey(x: char) {
 			0x41	=>	{
 				if (arr2) {
 					io::blank_cursor();
-	    				if (winlist.cursor_over_window())
-	    				{
-						winlist.draw_all();
-	    				}
 					io::move_cursor_up();
-	    				io::draw_cursor();
 					arr2 = false;
 				}
 			}
 			0x42	=>	{
 				if (arr2) {
 					io::blank_cursor();
-	    				if (winlist.cursor_over_window())
-	    				{
-						winlist.draw_all();
-	    				}
 	   				io::move_cursor_down();
-	    				io::draw_cursor();
 					arr2 = false;
 				}
 			}
 			0x43	=>	{
 				if (arr2) {
 					io::blank_cursor();
-	    				if (winlist.cursor_over_window())
-	    				{
-						winlist.draw_all();
-	    				}
 	   				io::move_cursor_right();
-	    				io::draw_cursor();
 					arr2 = false;
 				}
 			}
 			0x44	=>	{
 				if (arr2) {
 					io::blank_cursor();
-	    				if (winlist.cursor_over_window())
-	    				{
-						winlist.draw_all();
-	    				}
 	   				io::move_cursor_left();
-	    				io::draw_cursor();
 					arr2 = false;
 				}
 			}
@@ -174,26 +133,11 @@ pub unsafe fn parsekey(x: char) {
 				}
 			}
 		}
+		paint();
 	}
 	else {
 		keycode(x);
 	}
-}
-
-unsafe fn drawchar(x: char)
-{
-	if x == '\n' {
-		io::CURSOR_Y += io::CURSOR_HEIGHT;
-		io::CURSOR_X = 0u32;
-		return;
-	}
-    
-    io::restore();
-    io::draw_char(x);
-    io::CURSOR_X += io::CURSOR_WIDTH;
-    if io::CURSOR_X >= io::SCREEN_WIDTH {io::CURSOR_X -= io::SCREEN_WIDTH; io::CURSOR_Y += io::CURSOR_HEIGHT}
-    io::backup();
-    io::draw_cursor();
 }
 
 unsafe fn drawchar_at_coord(c: char, x: u32, y: u32, color: u32)
@@ -227,11 +171,6 @@ unsafe fn prompt(startup: bool) {
 }
 
 unsafe fn parse() {
-	//putstr("\n");
-	//putcstr(buffer);
-	//drawstr("\n");
-	//drawcstr(buffer);
-	//blah
 	if (buffer.streq(&"ls")) {
 	    list_directory(wd);
 	}
@@ -245,9 +184,7 @@ unsafe fn parse() {
 		current = (*current).di.parent;
 	    }
 	    putstr("\n");
-	    //drawstr("\n");
 	    putcstr(pwd);
-	    //drawcstr(pwd);
 	}
 	else if (buffer.streq(&"click")) {
 	    let mut w = window::new(cstr::from_str("Window 1"), 200, 50, 200, 200, true);
@@ -271,9 +208,7 @@ unsafe fn parse() {
 				    let catout = read_file(x);
 				    if !(catout.streq(&"")) {
 					putstr("\n");
-				  	//drawstr("\n");
 				    	putcstr(catout);
-				    	//drawcstr(catout);
 				    }
 				}
 				None        => { }
@@ -303,8 +238,6 @@ unsafe fn parse() {
 				let (a,b) = buffer.splitonce(' ');
 				putstr("\n");
 				putcstr(b); 
-				//drawstr("\n");
-				//drawcstr(b);
 			}
 			else if(y.streq(&"cd")) {
 			    let (cmd,dir) = buffer.splitonce(' ');
@@ -318,7 +251,6 @@ unsafe fn parse() {
 				}
 				else {
 					putstr("\nThat directory doesn't exist.");
-					//drawstr("\nThat directory doesn't exist.");
 				}
 			    }
 			}
@@ -327,7 +259,6 @@ unsafe fn parse() {
 				Some(x)        => {
 				    if !(delete_file(wd, x) || delete_directory((*wd).di.get_child(x))) {
 					putstr("\nNo such file/directory or directory isn't empty.");
-					//drawstr("\nNo such file/directory or directory isn't empty.");
 				    }
 				}
 				None        => { }
@@ -365,9 +296,12 @@ unsafe fn parse() {
 		    None        => { }
 		};
 	};
+	buffer.reset();
+}
+
+unsafe fn paint() {
 	winlist.draw_all();
 	io::draw_cursor();
-	buffer.reset();
 }
 
 unsafe fn read_file(filename: cstr) -> cstr {
@@ -558,9 +492,7 @@ impl dirlist {
 		let mut current = self.head;
 		while !(((current as uint) == 0) || ((current as u32) == io::BG_COLOR)) {
 			putstr("\n");
-			putcstr((*current).di.dname);		
-			//drawstr("\n");
-			//drawcstr((*current).di.dname);
+			putcstr((*current).di.dname);
 			current = (*current).next;
 		}
 	}
@@ -676,9 +608,7 @@ impl filelist {
 		let mut current = self.head;
 		while !(((((*current).next) as uint) == 0) || ((((*current).next) as u32) == io::BG_COLOR)) {
 			putstr("\n");
-			putcstr((*(*current).next).fi.fname);	
-			//drawstr("\n");
-			//drawcstr((*(*current).next).fi.fname);
+			putcstr((*(*current).next).fi.fname);
 			current = (*current).next;
 		}
 	}
@@ -942,12 +872,10 @@ pub unsafe fn move_window(wname: cstr, x: u32, y: u32) {
 	let wndw = winlist.get_windownode(wname);
 	(*wndw).win.blank();
 	(*wndw).win.mov(x, y);
-	winlist.draw_all();
 }
 
 pub unsafe fn bring_window_to_top(wname: cstr) {
 	winlist.bring_to_top(wname);
-	winlist.draw_all();
 }
 
 struct window {
