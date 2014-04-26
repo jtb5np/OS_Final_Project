@@ -23,6 +23,10 @@ pub static mut root: *mut dirnode = 0 as *mut dirnode;
 
 pub static mut wd: *mut dirnode = 0 as *mut dirnode;
 
+pub static mut arr1: bool = false;
+
+pub static mut arr2: bool = false;
+
 
 pub fn putchar(key: char) {
     unsafe {
@@ -102,7 +106,61 @@ pub unsafe fn parsekey(x: char) {
 				}
 			}
 			0x1B	=>	{
-				
+				arr1 = true;
+			}
+			0x5B	=>	{
+				if (arr1) {
+					arr2 = true;
+					arr1 = false;
+				}
+			}
+			0x41	=>	{
+				if (arr2) {
+					io::blank_cursor();
+	   				io::move_cursor_up();
+	    				if (winlist.cursor_over_window())
+	    				{
+						winlist.draw_all();
+	    				}
+	    				io::draw_cursor();
+					arr2 = false;
+				}
+			}
+			0x42	=>	{
+				if (arr2) {
+					io::blank_cursor();
+	   				io::move_cursor_down();
+	    				if (winlist.cursor_over_window())
+	    				{
+						winlist.draw_all();
+	    				}
+	    				io::draw_cursor();
+					arr2 = false;
+				}
+			}
+			0x43	=>	{
+				if (arr2) {
+					io::blank_cursor();
+	   				io::move_cursor_right();
+	    				if (winlist.cursor_over_window())
+	    				{
+						winlist.draw_all();
+	    				}
+	    				io::draw_cursor();
+					arr2 = false;
+				}
+			}
+			0x44	=>	{
+				if (arr2) {
+					io::blank_cursor();
+	   				io::move_cursor_left();
+	    				if (winlist.cursor_over_window())
+	    				{
+						winlist.draw_all();
+	    				}
+	    				io::draw_cursor();
+					arr2 = false;
+				}
 			}
 			_		=>	{
 				if (buffer.add_char(x)) { 
@@ -185,42 +243,6 @@ unsafe fn parse() {
 	    //drawstr("\n");
 	    putcstr(pwd);
 	    //drawcstr(pwd);
-	}
-	else if (buffer.streq(&"right")) {
-	    io::blank_cursor();
-	    io::move_cursor_right();
-	    if (winlist.cursor_over_window())
-	    {
-		winlist.draw_all();
-	    }
-	    io::draw_cursor();
-	}
-	else if (buffer.streq(&"left")) { 
-	    io::blank_cursor();
-	    io::move_cursor_left();
-	    if (winlist.cursor_over_window())
-	    {
-		winlist.draw_all();
-	    }
-	    io::draw_cursor();
-	}
-	else if (buffer.streq(&"up")) {
-	    io::blank_cursor();
-	    io::move_cursor_up();
-	    if (winlist.cursor_over_window())
-	    {
-		winlist.draw_all();
-	    }
-	    io::draw_cursor();
-	}
-	else if (buffer.streq(&"down")) { 
-	    io::blank_cursor();
-	    io::move_cursor_down();
-	    if (winlist.cursor_over_window())
-	    {
-		winlist.draw_all();
-	    }
-	    io::draw_cursor();
 	}
 	else if (buffer.streq(&"click")) {
 	    let mut w = window::new(cstr::from_str("Window 1"), 200, 50, 200, 200, true);
