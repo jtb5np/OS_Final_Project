@@ -23,6 +23,10 @@ pub static mut root: *mut dirnode = 0 as *mut dirnode;
 
 pub static mut wd: *mut dirnode = 0 as *mut dirnode;
 
+pub static mut tbar: taskbar = taskbar {
+					id: 0
+				};
+
 pub static mut arr1: bool = false;
 
 pub static mut arr2: bool = false;
@@ -164,7 +168,9 @@ pub unsafe fn init() {
     buffer = cstr::new(256);
     let root_name = cstr::from_str(&"root");
     let root_dir = directory::new(root_name, 0 as *mut dirnode);
-    let winlist = windowlist::new();
+    winlist = windowlist::new();
+    tbar = taskbar::new();
+    tbar.draw();
     root = dirnode::new(root_dir);
     wd = root;
     prompt(true);
@@ -1107,21 +1113,21 @@ impl windowlist {
 }
 
 struct taskbar {
-	name: cstr
+	id: uint
 }
 
 impl taskbar {
 	pub unsafe fn new() -> taskbar {
 		let this = taskbar {
-		name: cstr::from_str(&"Menu"),
+			id: 0
 		};
 		this
 	}
 
 	pub unsafe fn draw(&mut self) {
 		io::fill_box(1, 450, 635, 27, 0x666666);
-		io::draw_box(0, 449, 637, 29, 0x000000);
-		drawcstr_at_coord(self.name, 11, 456, 0x000000);
-		io::draw_line(57, 450, 57, 478, 0x000000);
+		io::draw_box(0, 449, 637, 29, 0x000001);
+		drawcstr_at_coord(cstr::from_str(&"Menu"), 11, 456, 0x000001);
+		io::draw_line(57, 450, 57, 478, 0x000001);
 	}
 }
