@@ -105,6 +105,11 @@ pub unsafe fn parsekey(x: char) {
 					putchar(''); 
 				}
 			}
+			9		=>	{
+				let win = winlist.get_bot();
+				bring_window_to_top(win.name);
+				io::draw_cursor();
+			}
 			0x1B	=>	{
 				arr1 = true;
 			}
@@ -117,11 +122,11 @@ pub unsafe fn parsekey(x: char) {
 			0x41	=>	{
 				if (arr2) {
 					io::blank_cursor();
-	   				io::move_cursor_up();
 	    				if (winlist.cursor_over_window())
 	    				{
 						winlist.draw_all();
 	    				}
+					io::move_cursor_up();
 	    				io::draw_cursor();
 					arr2 = false;
 				}
@@ -129,11 +134,11 @@ pub unsafe fn parsekey(x: char) {
 			0x42	=>	{
 				if (arr2) {
 					io::blank_cursor();
-	   				io::move_cursor_down();
 	    				if (winlist.cursor_over_window())
 	    				{
 						winlist.draw_all();
 	    				}
+	   				io::move_cursor_down();
 	    				io::draw_cursor();
 					arr2 = false;
 				}
@@ -141,11 +146,11 @@ pub unsafe fn parsekey(x: char) {
 			0x43	=>	{
 				if (arr2) {
 					io::blank_cursor();
-	   				io::move_cursor_right();
 	    				if (winlist.cursor_over_window())
 	    				{
 						winlist.draw_all();
 	    				}
+	   				io::move_cursor_right();
 	    				io::draw_cursor();
 					arr2 = false;
 				}
@@ -153,11 +158,11 @@ pub unsafe fn parsekey(x: char) {
 			0x44	=>	{
 				if (arr2) {
 					io::blank_cursor();
-	   				io::move_cursor_left();
 	    				if (winlist.cursor_over_window())
 	    				{
 						winlist.draw_all();
 	    				}
+	   				io::move_cursor_left();
 	    				io::draw_cursor();
 					arr2 = false;
 				}
@@ -249,7 +254,6 @@ unsafe fn parse() {
 	    let mut w2 = window::new(cstr::from_str("Window 2"), 300, 200, 200, 150, true);
 	    winlist.add_win_front(w);
 	    winlist.add_win_front(w2);
-	    winlist.draw_all();
 	    bring_window_to_top(w.name);
 	    //remove_window(w.name);
 	    putstr("\n");
@@ -361,6 +365,8 @@ unsafe fn parse() {
 		    None        => { }
 		};
 	};
+	winlist.draw_all();
+	io::draw_cursor();
 	buffer.reset();
 }
 
@@ -1147,6 +1153,11 @@ impl windowlist {
 			current = (*current).next;
 		}
 		false
+	}
+
+	pub unsafe fn get_bot(&mut self) -> window {
+		let current = self.head;
+		return (*current).win
 	}
 
 	pub unsafe fn draw_all(&mut self) {
