@@ -168,6 +168,7 @@ unsafe fn parse() {
 	//putcstr(buffer);
 	//drawstr("\n");
 	//drawcstr(buffer);
+	//blah
 	if (buffer.streq(&"ls")) {
 	    list_directory(wd);
 	}
