@@ -303,6 +303,7 @@ unsafe fn parse() {
 
 unsafe fn paint() {
 	winlist.draw_all();
+	tbar.draw();
 	io::draw_cursor();
 }
 
@@ -1126,8 +1127,8 @@ impl taskbar {
 
 	pub unsafe fn draw(&mut self) {
 		io::fill_box(1, 450, 635, 27, 0x666666);
-		io::draw_box(0, 449, 637, 29, 0x000000);
-		drawcstr_at_coord(cstr::from_str(&"Menu"), 11, 456, 0x000000);
-		io::draw_line(57, 450, 57, 478, 0x000000);
+		io::draw_box(0, 449, 637, 29, 0x000001);
+		drawcstr_at_coord(cstr::from_str(&"Menu"), 11, 456, 0x000001);
+		io::draw_line(57, 450, 57, 478, 0x000001);
 	}
 }

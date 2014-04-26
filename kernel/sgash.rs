@@ -303,6 +303,7 @@ unsafe fn parse() {
 
 unsafe fn paint() {
 	winlist.draw_all();
+	tbar.draw();
 	io::draw_cursor();
 }
 
