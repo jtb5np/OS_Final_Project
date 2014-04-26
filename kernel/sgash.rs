@@ -8,9 +8,6 @@ use kernel::*;
 use super::super::platform::*;
 use kernel::memory::Allocator;
 
-//#[path = "../rust-core/core/vec.rs"]
-//mod vec;
-
 
 pub static mut buffer: cstr = cstr {
 				p: 0 as *mut u8,
@@ -18,6 +15,9 @@ pub static mut buffer: cstr = cstr {
 				max: 0
 			      };
 
+pub static mut winlist: windowlist = windowlist {
+					head: 0 as *mut windownode
+				};
 
 pub static mut root: *mut dirnode = 0 as *mut dirnode;
 
@@ -62,6 +62,18 @@ pub unsafe fn drawcstr(s: cstr)
     }
 }
 
+pub unsafe fn drawcstr_at_coord(s: cstr, x: u32, y: u32, color: u32)
+{
+	let mut p = s.p as uint;
+	let mut i = 0;
+    while *(p as *char) != '\0'
+    {	
+	drawchar_at_coord(*(p as *char), x+i*io::CURSOR_WIDTH, y, color);
+	p += 1;
+	i += 1;
+    }
+}
+
 pub unsafe fn putcstr(s: cstr)
 {
     let mut p = s.p as uint;
@@ -87,7 +99,6 @@ pub unsafe fn parsekey(x: char) {
 					putchar('');
 					putchar(' ');
 					putchar(''); 
-					backspace();
 				}
 			}
 			0x1B	=>	{
@@ -96,7 +107,7 @@ pub unsafe fn parsekey(x: char) {
 			_		=>	{
 				if (buffer.add_char(x)) { 
 					putchar(x as char);
-					drawchar(x as char);
+					//drawchar(x as char);
 				}
 			}
 		}
@@ -122,82 +133,33 @@ unsafe fn drawchar(x: char)
     io::draw_cursor();
 }
 
-unsafe fn backspace()
-{
-    io::restore();
-    io::CURSOR_X -= io::CURSOR_WIDTH;
-    io::draw_char(' ');
-    io::backup();
-    io::draw_cursor();
+unsafe fn drawchar_at_coord(c: char, x: u32, y: u32, color: u32)
+{    
+    io::draw_char_at(c, x, y, color);
 }
 
 fn keycode(x: u8) {
-	let mut x = x;
-	while  x != 0 {
-		putchar((x%10+ ('0' as u8) ) as char);
-		x = x/10;
-	}
-	putchar(' ');
-}
-fn screen() {
-	
-	putstr(&"\n                                                               "); 
-	putstr(&"\n                                                               ");
-	putstr(&"\n                       7=..~$=..:7                             "); 
-	putstr(&"\n                  +$: =$$$+$$$?$$$+ ,7?                        "); 
-	putstr(&"\n                  $$$$$$$$$$$$$$$$$$Z$$                        ");
-	putstr(&"\n              7$$$$$$$$$$$$. .Z$$$$$Z$$$$$$                    ");
-	putstr(&"\n           ~..7$$Z$$$$$7+7$+.?Z7=7$$Z$$Z$$$..:                 ");
-	putstr(&"\n          ~$$$$$$$$7:     :ZZZ,     :7ZZZZ$$$$=                ");
-	putstr(&"\n           Z$$$$$?                    .+ZZZZ$$                 ");
-	putstr(&"\n       +$ZZ$$$Z7                         7ZZZ$Z$$I.            "); 
-	putstr(&"\n        $$$$ZZZZZZZZZZZZZZZZZZZZZZZZI,    ,ZZZ$$Z              "); 
-	putstr(&"\n      :+$$$$ZZZZZZZZZZZZZZZZZZZZZZZZZZZ=    $ZZ$$+~,           "); 
-	putstr(&"\n     ?$Z$$$$ZZZZZZZZZZZZZZZZZZZZZZZZZZZZI   7ZZZ$ZZI           "); 
-	putstr(&"\n      =Z$$+7Z$$7ZZZZZZZZ$$$$$$$ZZZZZZZZZZ  ~Z$?$ZZ?            ");	 
-	putstr(&"\n    :$Z$Z...$Z  $ZZZZZZZ~       ~ZZZZZZZZ,.ZZ...Z$Z$~          "); 
-	putstr(&"\n    7ZZZZZI$ZZ  $ZZZZZZZ~       =ZZZZZZZ7..ZZ$?$ZZZZ$          "); 
-	putstr(&"\n      ZZZZ$:    $ZZZZZZZZZZZZZZZZZZZZZZ=     ~$ZZZ$:           "); 
-	putstr(&"\n    7Z$ZZ$,     $ZZZZZZZZZZZZZZZZZZZZ7         ZZZ$Z$          "); 
-	putstr(&"\n   =ZZZZZZ,     $ZZZZZZZZZZZZZZZZZZZZZZ,       ZZZ$ZZ+         "); 
-	putstr(&"\n     ,ZZZZ,     $ZZZZZZZ:     =ZZZZZZZZZ     ZZZZZ$:           "); 
-	putstr(&"\n    =$ZZZZ+     ZZZZZZZZ~       ZZZZZZZZ~   =ZZZZZZZI          "); 
-	putstr(&"\n    $ZZ$ZZZ$$Z$$ZZZZZZZZZ$$$$   IZZZZZZZZZ$ZZZZZZZZZ$          "); 
-	putstr(&"\n      :ZZZZZZZZZZZZZZZZZZZZZZ   ~ZZZZZZZZZZZZZZZZZ~            "); 
-	putstr(&"\n     ,Z$$ZZZZZZZZZZZZZZZZZZZZ    ZZZZZZZZZZZZZZZZZZ~           "); 
-	putstr(&"\n     =$ZZZZZZZZZZZZZZZZZZZZZZ     $ZZZZZZZZZZZZZZZ$+           "); 
-	putstr(&"\n        IZZZZZ:.                        . ,ZZZZZ$              "); 
-	putstr(&"\n       ~$ZZZZZZZZZZZ                 ZZZZ$ZZZZZZZ+             "); 
-	putstr(&"\n           Z$ZZZ. ,Z~               =Z:.,ZZZ$Z                 "); 
-	putstr(&"\n          ,ZZZZZ..~Z$.             .7Z:..ZZZZZ:                ");
-	putstr(&"\n          ~7+:$ZZZZZZZZI=:.   .,=IZZZZZZZ$Z:=7=                ");
-	putstr(&"\n              $$ZZZZZZZZZZZZZZZZZZZZZZ$ZZZZ                    ");
-	putstr(&"\n              ==..$ZZZ$ZZZZZZZZZZZ$ZZZZ .~+                    "); 			
-	putstr(&"\n                  I$?.?ZZZ$ZZZ$ZZZI =$7                        ");
-	putstr(&"\n                       $7..I$7..I$,                            ");
-	putstr(&"\n"); 
-	putstr(&"\n _                     _     _                         _  ");
-	putstr(&"\n| |                   (_)   | |                       | | ");
-	putstr(&"\n| | ____ ___  ____     _____| |_____  ____ ____  _____| | ");
-	putstr(&"\n| |/ ___) _ \\|  _ \\   |  _   _) ___ |/ ___)  _ \\| ___ | | ");
-	putstr(&"\n| | |  | |_| | | | |  | |  \\ \\| ____| |   | | | | ____| | ");
-	putstr(&"\n|_|_|  \\____/|_| |_|  |_|   \\_\\_____)_|   |_| |_|_____)__)\n\n");
-
+	//let mut x = x;
+	//while  x != 0 {
+	//	putchar((x%10+ ('0' as u8) ) as char);
+	//	x = x/10;
+	//}
+	//putchar(' ');
 }
 
 pub unsafe fn init() {
     buffer = cstr::new(256);
     let root_name = cstr::from_str(&"root");
     let root_dir = directory::new(root_name, 0 as *mut dirnode);
+    let winlist = windowlist::new();
     root = dirnode::new(root_dir);
     wd = root;
-    screen();
     prompt(true);
 }
 
 unsafe fn prompt(startup: bool) {
 	putstr(&"\nsgash> ");
-	if !startup {drawstr(&"\nsgash> ");}
+	//if !startup {drawstr(&"\nsgash> ");}
 	buffer.reset();
 }
 
@@ -219,9 +181,59 @@ unsafe fn parse() {
 		current = (*current).di.parent;
 	    }
 	    putstr("\n");
-	    drawstr("\n");
+	    //drawstr("\n");
 	    putcstr(pwd);
-	    drawcstr(pwd);
+	    //drawcstr(pwd);
+	}
+	else if (buffer.streq(&"right")) {
+	    io::blank_cursor();
+	    io::move_cursor_right();
+	    if (winlist.cursor_over_window())
+	    {
+		winlist.draw_all();
+	    }
+	    io::draw_cursor();
+	}
+	else if (buffer.streq(&"left")) { 
+	    io::blank_cursor();
+	    io::move_cursor_left();
+	    if (winlist.cursor_over_window())
+	    {
+		winlist.draw_all();
+	    }
+	    io::draw_cursor();
+	}
+	else if (buffer.streq(&"up")) {
+	    io::blank_cursor();
+	    io::move_cursor_up();
+	    if (winlist.cursor_over_window())
+	    {
+		winlist.draw_all();
+	    }
+	    io::draw_cursor();
+	}
+	else if (buffer.streq(&"down")) { 
+	    io::blank_cursor();
+	    io::move_cursor_down();
+	    if (winlist.cursor_over_window())
+	    {
+		winlist.draw_all();
+	    }
+	    io::draw_cursor();
+	}
+	else if (buffer.streq(&"click")) {
+	    let mut w = window::new(cstr::from_str("Window 1"), 200, 50, 200, 200, true);
+	    let mut w2 = window::new(cstr::from_str("Window 2"), 300, 200, 200, 150, true);
+	    winlist.add_win_front(w);
+	    winlist.add_win_front(w2);
+	    winlist.draw_all();
+	    bring_window_to_top(w.name);
+	    //remove_window(w.name);
+	    putstr("\n");
+	    putstr("clicked");
+	}
+	else if (buffer.streq(&"movewin")) {
+		move_window((*winlist.head).win.name, (*winlist.head).win.x + 10, (*winlist.head).win.y + 10);
 	}
 	else {
 		match buffer.getarg(' ', 0) {
@@ -232,9 +244,9 @@ unsafe fn parse() {
 				    let catout = read_file(x);
 				    if !(catout.streq(&"")) {
 					putstr("\n");
-				  	drawstr("\n");
+				  	//drawstr("\n");
 				    	putcstr(catout);
-				    	drawcstr(catout);
+				    	//drawcstr(catout);
 				    }
 				}
 				None        => { }
@@ -264,8 +276,8 @@ unsafe fn parse() {
 				let (a,b) = buffer.splitonce(' ');
 				putstr("\n");
 				putcstr(b); 
-				drawstr("\n");
-				drawcstr(b);
+				//drawstr("\n");
+				//drawcstr(b);
 			}
 			else if(y.streq(&"cd")) {
 			    let (cmd,dir) = buffer.splitonce(' ');
@@ -279,7 +291,7 @@ unsafe fn parse() {
 				}
 				else {
 					putstr("\nThat directory doesn't exist.");
-					drawstr("\nThat directory doesn't exist.");
+					//drawstr("\nThat directory doesn't exist.");
 				}
 			    }
 			}
@@ -288,7 +300,7 @@ unsafe fn parse() {
 				Some(x)        => {
 				    if !(delete_file(wd, x) || delete_directory((*wd).di.get_child(x))) {
 					putstr("\nNo such file/directory or directory isn't empty.");
-					drawstr("\nNo such file/directory or directory isn't empty.");
+					//drawstr("\nNo such file/directory or directory isn't empty.");
 				    }
 				}
 				None        => { }
@@ -320,7 +332,7 @@ unsafe fn parse() {
 			}
 			else {
 			    putstr(&"\nNO");
-			    drawstr(&"\nNO");
+			    //drawstr(&"\nNO");
 			}
 		    }
 		    None        => { }
@@ -518,8 +530,8 @@ impl dirlist {
 		while !(((current as uint) == 0) || ((current as u32) == io::BG_COLOR)) {
 			putstr("\n");
 			putcstr((*current).di.dname);		
-			drawstr("\n");
-			drawcstr((*current).di.dname);
+			//drawstr("\n");
+			//drawcstr((*current).di.dname);
 			current = (*current).next;
 		}
 	}
@@ -636,8 +648,8 @@ impl filelist {
 		while !(((((*current).next) as uint) == 0) || ((((*current).next) as u32) == io::BG_COLOR)) {
 			putstr("\n");
 			putcstr((*(*current).next).fi.fname);	
-			drawstr("\n");
-			drawcstr((*(*current).next).fi.fname);
+			//drawstr("\n");
+			//drawcstr((*(*current).next).fi.fname);
 			current = (*current).next;
 		}
 	}
@@ -896,3 +908,229 @@ impl cstr {
 
 }
 
+
+pub unsafe fn move_window(wname: cstr, x: u32, y: u32) {
+	let wndw = winlist.get_windownode(wname);
+	(*wndw).win.blank();
+	(*wndw).win.mov(x, y);
+	winlist.draw_all();
+}
+
+pub unsafe fn bring_window_to_top(wname: cstr) {
+	winlist.bring_to_top(wname);
+	winlist.draw_all();
+}
+
+struct window {
+	name: cstr,
+	x: u32,
+	y: u32,
+	width: u32,
+	height: u32,
+	visible: bool
+}
+
+impl window {
+	pub unsafe fn new(name: cstr, x: u32, y: u32, width: u32, height: u32, visible: bool) -> window {
+		let this = window {
+			name: name,
+			x: x,
+			y: y,
+			width: width,
+			height: height,
+			visible: visible
+		};
+		this
+	}
+
+	pub unsafe fn set_visible(&mut self, vi: bool) {
+		self.visible = vi;
+	}
+
+	pub unsafe fn mov(&mut self, x: u32, y: u32) {
+		self.x = x;
+		self.y = y;
+	}
+
+	pub unsafe fn cursor_within(&mut self) -> bool {
+		(io::CURSOR_X > (self.x-7-io::CURSOR_WIDTH)) && (io::CURSOR_X < (self.x+self.width+12)) && (io::CURSOR_Y > (self.y-22- io::CURSOR_HEIGHT)) && (io::CURSOR_Y < (self.y+self.height+7))
+	}
+
+	pub unsafe fn draw(&mut self) {
+		if (self.visible) {
+			io::fill_box(self.x, self.y, self.width, self.height, 0x777777);
+			io::draw_box(self.x-1, self.y-1, self.width+2, self.height+2,0x000000);
+	    		io::draw_frame(self.x-6, self.y-6, self.width+12, self.height+12, 5, 0x666666);
+			io::fill_box(self.x-6, self.y-21, self.width+12, 15, 0x666666);
+			io::draw_box(self.x-7, self.y-22, self.width+14, self.height+29, 0x000000);
+			io::draw_box(self.x+self.width-10, self.y-18, 12, 12, 0x000000);
+			io::draw_line(self.x+self.width-10, self.y-18, self.x+self.width+2, self.y-6, 0x000000);
+			io::draw_line(self.x+self.width+2, self.y-18, self.x+self.width-10, self.y-6, 0x000000);
+			io::draw_box(self.x+self.width-26, self.y-18, 12, 12, 0x000000);
+			io::draw_line(self.x+self.width-24, self.y-9, self.x+self.width-15, self.y-9, 0x000000);
+			drawcstr_at_coord(self.name, self.x, self.y - 19, 0x000000);
+		}
+	}
+
+	pub unsafe fn blank(&mut self) {
+		io::fill_box(self.x-7, self.y-22, self.width+14, self.height+29, io::BG_COLOR);
+	}
+}
+
+struct windownode {
+	next: *mut windownode,
+	win: window
+}
+
+impl windownode {
+	pub unsafe fn new(w: window) -> *mut windownode {
+		let (x, y) = heap.alloc(128);
+		let this = windownode {
+			next: 0 as *mut windownode,
+			win: w
+		};
+		*(x as *mut windownode) = this;
+		(x as *mut windownode)
+	}
+}
+
+struct windowlist {
+	head: *mut windownode
+}
+
+impl windowlist {
+	pub unsafe fn new() -> windowlist {
+		let this = windowlist {
+			head: 0 as *mut windownode
+		};
+		this
+	}
+
+	pub unsafe fn get_windownode(&mut self, name: cstr) -> *mut windownode {
+		let mut current = self.head;
+		while ((current as uint) != 0) {
+			if ((*current).win.name.eq(&name)) {
+				return current;
+			}
+			current = (*current).next;
+		}
+		current
+	}
+
+	pub unsafe fn add_win_front(&mut self, w: window) -> bool {
+		if ((self.get_windownode(w.name) as uint) != 0) { return false; }
+		let mut winnode = windownode::new(w);
+		if ((self.head as uint) == 0) {
+			self.head = winnode;
+		}
+		else {
+			let temp = self.head;
+			(*winnode).next = temp;
+			self.head = winnode;
+		}
+		true
+	}
+
+	pub unsafe fn add_win_back(&mut self, w: window) -> bool {
+		if ((self.get_windownode(w.name) as uint) != 0) { return false; }
+		let mut winnode = windownode::new(w);
+		if ((self.head as uint) == 0) {
+			self.head = winnode;
+			return true;
+		}
+		let mut current = self.head;
+		while (((*current).next as uint) != 0) {
+			current = (*current).next;
+		}
+		(*current).next = winnode;
+		return true;
+	}
+
+	pub unsafe fn remove_win(&mut self, name: cstr) -> bool {
+		let mut current = self.head;
+		if ((current as uint) == 0) {
+			return false;
+		}
+		if (((*current).win.name).eq(&name)) {
+			(*current).win.blank();
+			let temp = (*current).next;
+			heap.free(current as *mut u8);
+			self.head = temp;
+			return true;
+		};
+		while !((((*current).next as uint) == 0) || (((*current).next as u32) == io::BG_COLOR)) {
+			if (((*(*current).next).win.name).eq(&name)) {
+				(*current).win.blank();
+				let temp = (*(*current).next).next;
+				heap.free((*current).next as *mut u8);
+				(*current).next = temp;
+				return true;
+			};
+			current = (*current).next;
+		}
+		false
+	}
+
+	pub unsafe fn bring_to_top(&mut self, name: cstr) -> bool {
+		let mut current = self.head;
+		if ((current as uint) == 0) {
+			return false;
+		}
+		if (((*current).win.name).eq(&name)) {
+			let temp = (*current).next;
+			let moving_node = current;
+			self.head = temp;
+			if ((self.head as uint) == 0) {
+				self.head = moving_node;
+				(*moving_node).next = 0 as *mut windownode;
+				return true;
+			}
+			let mut current2 = self.head;
+			while (((*current2).next as uint) != 0) {
+				current2 = (*current2).next;
+			}
+			(*current2).next = moving_node;
+			(*moving_node).next = 0 as *mut windownode;
+			return true;
+		};
+		while !((((*current).next as uint) == 0)) {
+			if (((*(*current).next).win.name).eq(&name)) {
+				let temp = (*(*current).next).next;
+				let moving_node = (*current).next;
+				(*current).next = temp;
+				//if ((self.head as uint) == 0) {
+				//	self.head = moving_node;
+				//	return true;
+				//}
+				let mut current2 = self.head;
+				while (((*current2).next as uint) != 0) {
+					current2 = (*current2).next;
+				}
+				(*current2).next = moving_node;
+				(*moving_node).next = 0 as *mut windownode;
+				return true;
+			};
+			current = (*current).next;
+		}
+		false
+	}
+
+	pub unsafe fn cursor_over_window(&mut self) -> bool {
+		let mut current = self.head;
+		while ((current as uint) != 0) {
+			if ((*current).win.cursor_within()) {
+				return true;
+			}
+			current = (*current).next;
+		}
+		false
+	}
+
+	pub unsafe fn draw_all(&mut self) {
+		let mut current = self.head;
+		while ((current as uint) != 0) {
+			(*current).win.draw();
+			current = (*current).next;
+		}
+	}
+}

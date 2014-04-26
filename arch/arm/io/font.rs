@@ -1,6 +1,6 @@
 /* Bitmap courtesy of cceckman */
 
-pub static bitmaps: [[u32, ..16], ..94] =
+pub static bitmaps: [[u32, ..16], ..95] =
 [
 [
 0x00000000 as u32,
@@ -1689,5 +1689,22 @@ pub static bitmaps: [[u32, ..16], ..94] =
 0x00100000 as u32,
 0x00000000 as u32,
 0x00000000 as u32
+],[
+0x10000000 as u32,
+0x10000000 as u32,
+0x11000000 as u32,
+0x11100000 as u32,
+0x11100000 as u32,
+0x11110000 as u32,
+0x11111000 as u32,
+0x11111000 as u32,
+0x11111100 as u32,
+0x11111110 as u32,
+0x11111110 as u32,
+0x11111111 as u32,
+0x00111000 as u32,
+0x00011100 as u32,
+0x00011100 as u32,
+0x00001110 as u32
  ]
  ];
