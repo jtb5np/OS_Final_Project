@@ -131,9 +131,7 @@ pub unsafe fn parsekey(x: char) {
 						winlist.delete_all();
 					}
 					else {					
-						win_count += 1;
-			    			let mut w = window::new(cstr::from_str("Window"), 50 + 10*(win_count as u32), 50 + 10*(win_count as u32), 200, 200, win_count, true);
-	   					winlist.add_win_back(w);
+						create_window(cstr::from_str("Window"));
 					}
 				}
 				else if (cursor_in(58, 449, 580, 29)) {
@@ -207,8 +205,8 @@ pub unsafe fn parsekey(x: char) {
 				if (arr2) {
 					io::blank_cursor();
 					io::move_cursor_up();
-					winlist.mov_attached_up();
-					winlist.exp_attached_up();
+					winlist.mov_attached(0);
+					winlist.exp_attached(0);
 					arr2 = false;
 				}
 			}
@@ -216,8 +214,8 @@ pub unsafe fn parsekey(x: char) {
 				if (arr2) {
 					io::blank_cursor();
 	   				io::move_cursor_down();
-					winlist.mov_attached_down();
-					winlist.exp_attached_down();
+					winlist.mov_attached(1);
+					winlist.exp_attached(1);
 					arr2 = false;
 				}
 			}
@@ -225,8 +223,8 @@ pub unsafe fn parsekey(x: char) {
 				if (arr2) {
 					io::blank_cursor();
 	   				io::move_cursor_right();
-					winlist.mov_attached_right();
-					winlist.exp_attached_right();
+					winlist.mov_attached(3);
+					winlist.exp_attached(3);
 					arr2 = false;
 				}
 			}
@@ -234,8 +232,8 @@ pub unsafe fn parsekey(x: char) {
 				if (arr2) {
 					io::blank_cursor();
 	   				io::move_cursor_left();
-					winlist.mov_attached_left();
-					winlist.exp_attached_left();
+					winlist.mov_attached(2);
+					winlist.exp_attached(2);
 					arr2 = false;
 				}
 			}
@@ -246,6 +244,12 @@ pub unsafe fn parsekey(x: char) {
 			}
 		}
 		paint();
+}
+
+unsafe fn create_window(nm: cstr) {
+	win_count += 1;
+	let mut w = window::new(nm, 50 + 10*(win_count as u32), 50 + 10*(win_count as u32), 200, 200, win_count, true);
+	winlist.add_win_back(w);
 }
 
 unsafe fn drawchar_at_coord(c: char, x: u32, y: u32, color: u32)
@@ -297,9 +301,8 @@ unsafe fn parse() {
 			else if(y.streq(&"rm")) {
 			    match buffer.getarg(' ', 1) {
 				Some(x)        => {
-				    if !(delete_file(wd, x) || delete_directory((*wd).di.get_child(x))) {
-					putstr("\nNo such file/directory or directory isn't empty.");
-				    }
+				    delete_file(wd, x);
+				    delete_directory((*wd).di.get_child(x));
 				}
 				None        => { }
 			    };
@@ -313,9 +316,6 @@ unsafe fn parse() {
 			    	let subdir = (*wd).di.get_child(dir);
 				if !(((subdir as uint) == 0) || ((subdir as u32) == io::BG_COLOR)) {
 					wd = subdir;
-				}
-				else {
-					putstr("\nThat directory doesn't exist.");
 				}
 			    }
 			}
@@ -342,9 +342,6 @@ unsafe fn parse() {
 				}
 				None        => { }
 			    };
-			}
-			else {
-			    putstr(&"\nNO");
 			}
 		    }
 		    None        => { }
@@ -869,14 +866,13 @@ impl cstr {
 			selfp += 1;
 			ind += 1;
 			if (ind == self.max) { 
-				putstr(&"\nSomething broke!");
 				return None; 
 			}
 		}
 	}
 
 #[allow(dead_code)]
-	unsafe fn split(&self, delim: char) -> (cstr, cstr) {
+	/*unsafe fn split(&self, delim: char) -> (cstr, cstr) {
 		let mut selfp: uint = self.p as uint;
 		let mut beg = cstr::new(256);
 		let mut end = cstr::new(256);
@@ -896,7 +892,7 @@ impl cstr {
 			};
 			selfp += 1;
 		}
-	}
+	}*/
 
 #[allow(dead_code)]
 	unsafe fn splitonce(&self, delim: char) -> (cstr, cstr) {
@@ -1026,7 +1022,29 @@ impl windowlist {
 		current
 	}
 
-	pub unsafe fn mov_attached_up(&mut self) {
+	pub unsafe fn mov_attached(&mut self, direction: u32) {
+		let mut current = self.head;
+		while ((current as uint) != 0) {
+			if ((*current).win.attached) {
+				(*current).win.blank();
+				if (direction == 0) {
+					(*current).win.y = (*current).win.y - 8;
+				}
+				else if (direction == 1) {
+					(*current).win.y = (*current).win.y + 8;
+				}
+				else if (direction == 2) {
+					(*current).win.x = (*current).win.x - 8;
+				}
+				else {
+					(*current).win.x = (*current).win.x + 8;
+				}
+			}
+			current = (*current).next;
+		}
+	}
+
+	/*pub unsafe fn mov_attached_up(&mut self) {
 		let mut current = self.head;
 		while ((current as uint) != 0) {
 			if ((*current).win.attached) {
@@ -1068,9 +1086,32 @@ impl windowlist {
 			}
 			current = (*current).next;
 		}
+	}*/
+
+	pub unsafe fn exp_attached(&mut self, direction: u32) {
+		let mut current = self.head;
+		while ((current as uint) != 0) {
+			if ((*current).win.expanding) {
+				if (direction == 0) {
+					(*current).win.blank();
+					(*current).win.height = (*current).win.height - 8;
+				}
+				else if (direction == 1) {
+					(*current).win.height = (*current).win.height + 8;
+				}
+				else if (direction == 2) {
+					(*current).win.blank();
+					(*current).win.width = (*current).win.width - 8;
+				}
+				else {
+					(*current).win.width = (*current).win.width + 8;
+				}
+			}
+			current = (*current).next;
+		}
 	}
 
-	pub unsafe fn exp_attached_right(&mut self) {
+	/*pub unsafe fn exp_attached_right(&mut self) {
 		let mut current = self.head;
 		while ((current as uint) != 0) {
 			if ((*current).win.expanding) {
@@ -1110,7 +1151,7 @@ impl windowlist {
 			}
 			current = (*current).next;
 		}
-	}
+	}*/
 
 	pub unsafe fn add_win_back(&mut self, w: window) -> bool {
 		if ((self.get_windownode(w.id) as uint) != 0) { return false; }
@@ -1274,7 +1315,7 @@ impl taskbar {
 	}
 
 	pub unsafe fn clear_menu(&mut self) {
-		io::fill_box(0, 408, 100, 40, io::BG_COLOR);
+		io::fill_box(0, 388, 100, 60, io::BG_COLOR);
 	}
 
 	pub unsafe fn draw(&mut self) {
@@ -1296,6 +1337,9 @@ impl taskbar {
 			io::fill_box(0, 408, 100, 20, 0x888888);
 			io::draw_box(0, 408, 100, 20, 0x000000);
 			drawstr_at_coord(&"Close All", 14, 410, 0x000000);
+			io::fill_box(0, 388, 100, 20, 0x888888);
+			io::draw_box(0, 388, 100, 20, 0x000000);
+			drawstr_at_coord(&"Show Files", 10, 390, 0x000000);
 		}
 		drawstr_at_coord(&"Menu", 11, 456, 0x000001);
 	}

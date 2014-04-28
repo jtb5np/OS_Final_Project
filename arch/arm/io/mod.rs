@@ -80,64 +80,6 @@ pub unsafe fn write_char(c: char, address: *mut u32) {
     volatile_store(address, c as u32);
 }
 
-pub unsafe fn scrollup()
-{
-    let mut i = CURSOR_HEIGHT*SCREEN_WIDTH;
-    while i < (SCREEN_WIDTH*SCREEN_HEIGHT)
-    {
-	*((START_ADDR + ((i-16*SCREEN_WIDTH)*4)) as *mut u32) = *((START_ADDR+(i*4)) as *u32); 
-	i += 1;
-    }
-    i = 4*(SCREEN_WIDTH*SCREEN_HEIGHT - CURSOR_HEIGHT*SCREEN_WIDTH);
-    while i < 4*SCREEN_WIDTH*SCREEN_HEIGHT
-    {
-	*((START_ADDR + (i as u32)) as *mut u32) = BG_COLOR;
-	i += 4;
-    }
-    CURSOR_X = 0x0u32;
-    CURSOR_Y -= CURSOR_HEIGHT;
-}
-pub unsafe fn draw_char(c: char)
-{
-    if CURSOR_X+(SCREEN_WIDTH*CURSOR_Y) >= SCREEN_WIDTH*SCREEN_HEIGHT
-    {
-	scrollup();
-    }
-    let font_offset = (c as u8) - 0x20;
-    let map = font::bitmaps[font_offset];
-
-    let mut i = -1;
-    let mut j = 0;
-    let mut addr = START_ADDR + 4*(CURSOR_X + CURSOR_WIDTH + 1 + SCREEN_WIDTH*CURSOR_Y);
-    while j < CURSOR_HEIGHT
-    {
-	while i < CURSOR_WIDTH
-	{
-	    //let addr = START_ADDR + 4*(CURSOR_X + CURSOR_WIDTH - i + SCREEN_WIDTH*(CURSOR_Y + j));
-	    //let addr = START_ADDR + 4*(CURSOR_X + CURSOR_WIDTH + SCREEN_WIDTH*CURSOR_Y) - 4*i + 4*SCREEN_WIDTH*j
-	    //if ((map[16-j] >> 4*i) & 1) == 1
-	    if ((map[j] >> 4*i) & 1) == 1
-	    {
-		if ((*(addr as *mut u32) == FG_COLOR) || (*(addr as *mut u32) == BG_COLOR)) {
-			*(addr as *mut u32) = FG_COLOR;
-		}
-	    }
-	    else
-	    {
-		if ((*(addr as *mut u32) == FG_COLOR) || (*(addr as *mut u32) == BG_COLOR)) {
-			*(addr as *mut u32) = BG_COLOR;
-		}
-	    }
-	    
-	    addr-= 4;
-	    i += 1;
-	}
-	addr += 4*(i+SCREEN_WIDTH);
-	i = 0;
-	j += 1;
-    }
-}
-
 pub unsafe fn draw_char_at(c: char, x: u32, y: u32, color: u32)
 {
     let font_offset = (c as u8) - 0x20;
