@@ -171,22 +171,22 @@ pub unsafe fn draw_char_at(c: char, x: u32, y: u32, color: u32)
 
 pub unsafe fn move_cursor_right()
 {
-	CURSOR_X += CURSOR_WIDTH;
+	CURSOR_X += 8;
 }
 
 pub unsafe fn move_cursor_left()
 {
-	CURSOR_X -= CURSOR_WIDTH;
+	CURSOR_X -= 8;
 }
 
 pub unsafe fn move_cursor_up()
 {
-	CURSOR_Y -= CURSOR_HEIGHT;
+	CURSOR_Y -= 8;
 }
 
 pub unsafe fn move_cursor_down()
 {
-	CURSOR_Y += CURSOR_HEIGHT;
+	CURSOR_Y += 8;
 }
 
 pub unsafe fn blank_cursor()
@@ -252,42 +252,6 @@ pub unsafe fn fill_box(x: u32, y: u32, width: u32, height: u32, color: u32)
 		draw_line(x, y + i, x + width + 1, y + i, color);
 		i += 1;
 	}
-}
-
-pub unsafe fn backup()
-{
-    let mut i = 0;
-    let mut j = 0;
-    while j < CURSOR_HEIGHT
-    {
-	while i < CURSOR_WIDTH
-	{
-	    let addr = START_ADDR + 4*(CURSOR_X + i + SCREEN_WIDTH*(CURSOR_Y + j));
-	    CURSOR_BUFFER[i + j*8] = *(addr as *mut u32);
-	    i += 1;
-	}
-	i = 0;
-	j += 1;
-    }
-    SAVE_X = CURSOR_X;
-    SAVE_Y = CURSOR_Y;
-}
-
-pub unsafe fn restore()
-{
-    let mut i = 0;
-    let mut j = 0;
-    while j < CURSOR_HEIGHT
-    {
-	while i < CURSOR_WIDTH
-	{
-	    let addr = START_ADDR + 4*(SAVE_X + i + SCREEN_WIDTH*(SAVE_Y + j));
-	    *(addr as *mut u32) = CURSOR_BUFFER[i + j*8];
-	    i += 1;
-	}
-	i = 0;
-	j += 1;
-    }
 }
 
 pub unsafe fn draw_cursor()

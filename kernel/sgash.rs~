@@ -50,6 +50,14 @@ fn putstr(msg: &str) {
     }
 }
 
+pub unsafe fn drawstr_at_coord(msg: &str, x: u32, y: u32, color: u32) {
+    let mut i = 0;
+    for c in slice::iter(as_bytes(msg)) {
+	drawchar_at_coord(*c as char, x+i*io::CURSOR_WIDTH, y, color);
+	i += 1;
+    }
+}
+
 pub unsafe fn putcstr(s: cstr)
 {
     let mut p = s.p as uint;
@@ -72,11 +80,27 @@ pub unsafe fn drawcstr_at_coord(s: cstr, x: u32, y: u32, color: u32)
     }
 }
 
+pub unsafe fn drawcstr_in_window(s: cstr, x: u32, y: u32, width: u32, color: u32)
+{
+	let mut p = s.p as uint;
+	let mut i = 0;
+	let mut j = 0;
+    while *(p as *char) != '\0'
+    {	
+	if (((i+1)*io::CURSOR_WIDTH) > width) {
+		i = 0;
+		j += 1;
+	}
+	drawchar_at_coord(*(p as *char), x+i*io::CURSOR_WIDTH, y+j*io::CURSOR_HEIGHT, color);
+	p += 1;
+	i += 1;
+    }
+}
+
 pub unsafe fn parsekey(x: char) {
 	let x = x as u8;
 	// Set this to false to learn the keycodes of various keys!
 	// Key codes are printed backwards because life is hard	
-	if (true) {
 		match x { 
 			13		=>	{ 
 						parse();
@@ -101,11 +125,73 @@ pub unsafe fn parsekey(x: char) {
 					tbar.close_menu();
 					tbar.clear_menu();
 				}
-				else if (tbar.menu_open && cursor_in(0, 428, 100, 20))
+				else if (tbar.menu_open && cursor_in(0, 408, 100, 40))
 				{
-					win_count += 1;
-			    		let mut w = window::new(cstr::from_str("Window"), 50 + 10*win_count, 50 + 10*win_count, 200, 200, win_count, true);
-	   				winlist.add_win_back(w);
+					if (cursor_in(0, 408, 100, 20)) {
+						winlist.delete_all();
+					}
+					else {					
+						win_count += 1;
+			    			let mut w = window::new(cstr::from_str("Window"), 50 + 10*(win_count as u32), 50 + 10*(win_count as u32), 200, 200, win_count, true);
+	   					winlist.add_win_back(w);
+					}
+				}
+				else if (cursor_in(58, 449, 580, 29)) {
+					let mut current = winlist.head;
+					let mut i: u32 = 0;
+					while ((current as uint) != 0) {
+						if(cursor_in(58 + 70*i, 449, 70, 29)) {
+							if ((*current).win.visible) {
+								let top = winlist.get_top_win();
+								if (top == current) {
+									(*current).win.blank();
+									(*current).win.set_visible(false);
+								}
+								else {
+									bring_window_to_top((*current).win.id);
+								}
+							}
+							else {
+								(*current).win.set_visible(true);
+								bring_window_to_top((*current).win.id);
+							}
+						}
+						current = (*current).next;
+						i += 1;
+					}
+				}
+				else {
+					let selected_window = winlist.top_window_under_cursor();
+					if ((selected_window as uint) != 0) {
+						if (cursor_in((*selected_window).win.x+(*selected_window).win.width-10, (*selected_window).win.y-18, 12, 12) && (*selected_window).win.visible) {
+							(*selected_window).win.blank();
+							winlist.remove_win((*selected_window).win.id);
+						}
+						else if (cursor_in((*selected_window).win.x+(*selected_window).win.width-26, (*selected_window).win.y-18, 12, 12) && (*selected_window).win.visible) {
+							(*selected_window).win.blank();
+							(*selected_window).win.set_visible(false);
+						}
+						else if (cursor_in((*selected_window).win.x-7, (*selected_window).win.y-22, (*selected_window).win.width + 14, 22) && (*selected_window).win.visible) {
+							bring_window_to_top((*selected_window).win.id);
+							if ((*selected_window).win.attached) {
+								(*selected_window).win.attached = false;
+							}
+							else {
+								(*selected_window).win.attached = true;
+							}
+						}
+						else if (cursor_in((*selected_window).win.x+(*selected_window).win.width-3, (*selected_window).win.y+(*selected_window).win.height-3, 8, 8) && (*selected_window).win.visible) {
+							if ((*selected_window).win.expanding) {
+								(*selected_window).win.expanding = false;
+							}
+							else {
+								(*selected_window).win.expanding = true;
+							}
+						}
+						else {
+							bring_window_to_top((*selected_window).win.id);
+						}
+					}
 				}
 			}
 			0x1B	=>	{
@@ -121,6 +207,8 @@ pub unsafe fn parsekey(x: char) {
 				if (arr2) {
 					io::blank_cursor();
 					io::move_cursor_up();
+					winlist.mov_attached_up();
+					winlist.exp_attached_up();
 					arr2 = false;
 				}
 			}
@@ -128,6 +216,8 @@ pub unsafe fn parsekey(x: char) {
 				if (arr2) {
 					io::blank_cursor();
 	   				io::move_cursor_down();
+					winlist.mov_attached_down();
+					winlist.exp_attached_down();
 					arr2 = false;
 				}
 			}
@@ -135,6 +225,8 @@ pub unsafe fn parsekey(x: char) {
 				if (arr2) {
 					io::blank_cursor();
 	   				io::move_cursor_right();
+					winlist.mov_attached_right();
+					winlist.exp_attached_right();
 					arr2 = false;
 				}
 			}
@@ -142,6 +234,8 @@ pub unsafe fn parsekey(x: char) {
 				if (arr2) {
 					io::blank_cursor();
 	   				io::move_cursor_left();
+					winlist.mov_attached_left();
+					winlist.exp_attached_left();
 					arr2 = false;
 				}
 			}
@@ -152,10 +246,6 @@ pub unsafe fn parsekey(x: char) {
 			}
 		}
 		paint();
-	}
-	else {
-		keycode(x);
-	}
 }
 
 unsafe fn drawchar_at_coord(c: char, x: u32, y: u32, color: u32)
@@ -163,21 +253,12 @@ unsafe fn drawchar_at_coord(c: char, x: u32, y: u32, color: u32)
     io::draw_char_at(c, x, y, color);
 }
 
-fn keycode(x: u8) {
-	//let mut x = x;
-	//while  x != 0 {
-	//	putchar((x%10+ ('0' as u8) ) as char);
-	//	x = x/10;
-	//}
-	//putchar(' ');
-}
-
 pub unsafe fn init() {
     buffer = cstr::new(256);
     let root_name = cstr::from_str(&"root");
     let root_dir = directory::new(root_name, 0 as *mut dirnode);
-    winlist = windowlist::new();
-    tbar = taskbar::new();
+    //winlist = windowlist::new();
+    //tbar = taskbar::new();
     tbar.draw();
     root = dirnode::new(root_dir);
     wd = root;
@@ -191,41 +272,9 @@ unsafe fn prompt(startup: bool) {
 }
 
 unsafe fn parse() {
-	if (buffer.streq(&"ls")) {
-	    list_directory(wd);
-	}
-	else if (buffer.streq(&"pwd")) { 
-	    let mut pwd = cstr::new(4096);
-	    let mut slash = cstr::from_str(&"/");
-	    let mut current = wd;
-	    while !(((current as uint) == 0) || ((current as u32) == io::BG_COLOR)) {
-		pwd.concatfront((*current).di.dname);
-		pwd.concatfront(slash);
-		current = (*current).di.parent;
-	    }
-	    putstr("\n");
-	    putcstr(pwd);
-	}
-	else if (buffer.streq(&"movewin")) {
-		let top_win = (*winlist.get_top_win());
-		move_window(top_win.win.id, top_win.win.x + 10, top_win.win.y + 10);
-	}
-	else {
 		match buffer.getarg(' ', 0) {
 		    Some(y)        => {
-			if(y.streq(&"cat")) {
-			    match buffer.getarg(' ', 1) {
-				Some(x)        => {
-				    let catout = read_file(x);
-				    if !(catout.streq(&"")) {
-					putstr("\n");
-				    	putcstr(catout);
-				    }
-				}
-				None        => { }
-			    };
-			}
-			else if(y.streq(&"mv")) {
+			if(y.streq(&"mv")) {
 			    match buffer.getarg(' ', 1) {
 				Some(filename)        => {
 				    match buffer.getarg(' ', 2) {
@@ -245,10 +294,15 @@ unsafe fn parse() {
 				None        => { }
 			    };
 			}
-			else if(y.streq(&"echo")) {
-				let (a,b) = buffer.splitonce(' ');
-				putstr("\n");
-				putcstr(b); 
+			else if(y.streq(&"rm")) {
+			    match buffer.getarg(' ', 1) {
+				Some(x)        => {
+				    if !(delete_file(wd, x) || delete_directory((*wd).di.get_child(x))) {
+					putstr("\nNo such file/directory or directory isn't empty.");
+				    }
+				}
+				None        => { }
+			    };
 			}
 			else if(y.streq(&"cd")) {
 			    let (cmd,dir) = buffer.splitonce(' ');
@@ -264,16 +318,6 @@ unsafe fn parse() {
 					putstr("\nThat directory doesn't exist.");
 				}
 			    }
-			}
-			else if(y.streq(&"rm")) {
-			    match buffer.getarg(' ', 1) {
-				Some(x)        => {
-				    if !(delete_file(wd, x) || delete_directory((*wd).di.get_child(x))) {
-					putstr("\nNo such file/directory or directory isn't empty.");
-				    }
-				}
-				None        => { }
-			    };
 			}
 			else if(y.streq(&"mkdir")) {
 			    let (cmd, dir) = buffer.splitonce(' ');
@@ -305,7 +349,6 @@ unsafe fn parse() {
 		    }
 		    None        => { }
 		};
-	};
 	buffer.reset();
 }
 
@@ -883,14 +926,6 @@ impl cstr {
 }
 
 
-pub unsafe fn move_window(wid: uint, x: u32, y: u32) {
-	let wndw = winlist.get_windownode(wid);
-	if ((wndw as uint) != 0) {
-		(*wndw).win.blank();
-		(*wndw).win.mov(x, y);
-	}
-}
-
 pub unsafe fn bring_window_to_top(wid: uint) {
 	winlist.bring_to_top(wid);
 }
@@ -902,7 +937,10 @@ struct window {
 	width: u32,
 	height: u32,
 	visible: bool,
-	id: uint
+	id: uint,
+	attached: bool,
+	expanding: bool,
+	data: cstr
 }
 
 impl window {
@@ -914,18 +952,16 @@ impl window {
 			width: width,
 			height: height,
 			visible: visible,
-			id: id
+			id: id,
+			attached: false,
+			expanding: false,
+			data: cstr::from_str("Things go here.")
 		};
 		this
 	}
 
 	pub unsafe fn set_visible(&mut self, vi: bool) {
 		self.visible = vi;
-	}
-
-	pub unsafe fn mov(&mut self, x: u32, y: u32) {
-		self.x = x;
-		self.y = y;
 	}
 
 	pub unsafe fn cursor_within(&mut self) -> bool {
@@ -945,6 +981,7 @@ impl window {
 			io::draw_box(self.x+self.width-26, self.y-18, 12, 12, 0x000000);
 			io::draw_line(self.x+self.width-24, self.y-9, self.x+self.width-15, self.y-9, 0x000000);
 			drawcstr_at_coord(self.name, self.x, self.y - 19, 0x000000);
+			drawcstr_in_window(self.data, self.x, self.y, self.width, 0x000000);
 		}
 	}
 
@@ -993,18 +1030,90 @@ impl windowlist {
 		current
 	}
 
-	pub unsafe fn add_win_front(&mut self, w: window) -> bool {
-		if ((self.get_windownode(w.id) as uint) != 0) { return false; }
-		let mut winnode = windownode::new(w);
-		if ((self.head as uint) == 0) {
-			self.head = winnode;
+	pub unsafe fn mov_attached_up(&mut self) {
+		let mut current = self.head;
+		while ((current as uint) != 0) {
+			if ((*current).win.attached) {
+				(*current).win.blank();
+				(*current).win.y = (*current).win.y - 8;
+			}
+			current = (*current).next;
 		}
-		else {
-			let temp = self.head;
-			(*winnode).next = temp;
-			self.head = winnode;
+	}
+
+	pub unsafe fn mov_attached_down(&mut self) {
+		let mut current = self.head;
+		while ((current as uint) != 0) {
+			if ((*current).win.attached) {
+				(*current).win.blank();
+				(*current).win.y = (*current).win.y + 8;
+			}
+			current = (*current).next;
 		}
-		true
+	}
+
+	pub unsafe fn mov_attached_left(&mut self) {
+		let mut current = self.head;
+		while ((current as uint) != 0) {
+			if ((*current).win.attached) {
+				(*current).win.blank();
+				(*current).win.x = (*current).win.x - 8;
+			}
+			current = (*current).next;
+		}
+	}
+
+	pub unsafe fn mov_attached_right(&mut self) {
+		let mut current = self.head;
+		while ((current as uint) != 0) {
+			if ((*current).win.attached) {
+				(*current).win.blank();
+				(*current).win.x = (*current).win.x + 8;
+			}
+			current = (*current).next;
+		}
+	}
+
+	pub unsafe fn exp_attached_right(&mut self) {
+		let mut current = self.head;
+		while ((current as uint) != 0) {
+			if ((*current).win.expanding) {
+				(*current).win.width = (*current).win.width + 8;
+			}
+			current = (*current).next;
+		}
+	}
+
+	pub unsafe fn exp_attached_left(&mut self) {
+		let mut current = self.head;
+		while ((current as uint) != 0) {
+			if ((*current).win.expanding) {
+				(*current).win.blank();
+				(*current).win.width = (*current).win.width - 8;
+			}
+			current = (*current).next;
+		}
+	}
+
+	pub unsafe fn exp_attached_up(&mut self) {
+		let mut current = self.head;
+		while ((current as uint) != 0) {
+			if ((*current).win.expanding) {
+				(*current).win.blank();
+				(*current).win.height = (*current).win.height - 8;
+			}
+			current = (*current).next;
+		}
+	}
+
+	pub unsafe fn exp_attached_down(&mut self) {
+		let mut current = self.head;
+		while ((current as uint) != 0) {
+			if ((*current).win.expanding) {
+				(*current).win.height = (*current).win.height + 8;
+			}
+			current = (*current).next;
+		}
 	}
 
 	pub unsafe fn add_win_back(&mut self, w: window) -> bool {
@@ -1020,6 +1129,15 @@ impl windowlist {
 		}
 		(*current).next = winnode;
 		return true;
+	}
+
+	pub unsafe fn delete_all(&mut self) {
+		while ((self.head as uint) != 0) {
+			(*self.head).win.blank();
+			let temp = (*self.head).next;
+			heap.free(self.head as *mut u8);
+			self.head = temp;
+		}
 	}
 
 	pub unsafe fn remove_win(&mut self, id: uint) -> bool {
@@ -1118,6 +1236,18 @@ impl windowlist {
 		current
 	}
 
+	pub unsafe fn top_window_under_cursor(&mut self) -> *mut windownode {
+		let mut current = self.head;
+		let mut last = current;
+		while ((current as uint) != 0) {
+			if (cursor_in((*current).win.x-7, (*current).win.y-22, (*current).win.width+14, (*current).win.height+29)) {
+				last = current;
+			}
+			current = (*current).next;
+		}
+		last
+	}
+
 	pub unsafe fn draw_all(&mut self) {
 		let mut current = self.head;
 		while ((current as uint) != 0) {
@@ -1148,21 +1278,29 @@ impl taskbar {
 	}
 
 	pub unsafe fn clear_menu(&mut self) {
-		io::fill_box(0, 428, 100, 20, io::BG_COLOR);
+		io::fill_box(0, 408, 100, 40, io::BG_COLOR);
 	}
 
 	pub unsafe fn draw(&mut self) {
-		let menu = cstr::from_str(&"Menu");
 		io::fill_box(1, 450, 635, 27, 0x666666);
 		io::draw_box(0, 449, 637, 29, 0x000001);
 		io::draw_line(57, 450, 57, 478, 0x000001);
+		let mut current = winlist.head;
+		let mut i: u32 = 0;
+		while ((current as uint) != 0) {
+			io::draw_box(58 + 70*i, 449, 70, 29, 0x000001);
+			drawcstr_at_coord((*current).win.name, 66 + 70*i, 456, 0x000001);
+			current = (*current).next;
+			i += 1;
+		}
 		if (self.menu_open) {
-			let open_win = cstr::from_str(&"Open Window");
 			io::fill_box(0, 428, 100, 20, 0x888888);
 			io::draw_box(0, 428, 100, 20, 0x000000);
-			drawcstr_at_coord(open_win, 6, 430, 0x000000);
+			drawstr_at_coord(&"Open Window", 6, 430, 0x000000);
+			io::fill_box(0, 408, 100, 20, 0x888888);
+			io::draw_box(0, 408, 100, 20, 0x000000);
+			drawstr_at_coord(&"Close All", 14, 410, 0x000000);
 		}
-		drawcstr_at_coord(menu, 11, 456, 0x000001);
-		menu.destroy();
+		drawstr_at_coord(&"Menu", 11, 456, 0x000001);
 	}
 }
