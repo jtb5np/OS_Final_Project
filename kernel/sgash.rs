@@ -1277,7 +1277,7 @@ impl windowlist {
 		let mut current = self.head;
 		let mut last = current;
 		while ((current as uint) != 0) {
-			if (cursor_in((*current).win.x-7, (*current).win.y-22, (*current).win.width+14, (*current).win.height+29)) {
+			if (cursor_in((*current).win.x-7, (*current).win.y-22, (*current).win.width+14, (*current).win.height+29) && (*current).win.visible) {
 				last = current;
 			}
 			current = (*current).next;

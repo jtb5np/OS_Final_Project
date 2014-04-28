@@ -113,10 +113,10 @@ pub unsafe fn parsekey(x: char) {
 					putchar(''); 
 				}
 			}
-			//9		=>	{
-				//let win = winlist.get_bot();
-				//bring_window_to_top(win.id);
-			//}
+			9		=>	{
+				let win = winlist.get_bot();
+				bring_window_to_top(win.id);
+			}
 			92		=>	{
 				if (!tbar.menu_open && cursor_in(0, 449, 57, 29)) {
 					tbar.open_menu();
@@ -1277,7 +1277,7 @@ impl windowlist {
 		let mut current = self.head;
 		let mut last = current;
 		while ((current as uint) != 0) {
-			if (cursor_in((*current).win.x-7, (*current).win.y-22, (*current).win.width+14, (*current).win.height+29)) {
+			if (cursor_in((*current).win.x-7, (*current).win.y-22, (*current).win.width+14, (*current).win.height+29) && (*current).visible) {
 				last = current;
 			}
 			current = (*current).next;
