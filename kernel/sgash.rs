@@ -129,10 +129,11 @@ pub unsafe fn parsekey(x: char) {
 				{
 					if (cursor_in(0, 388, 100, 40)) {
 						if (cursor_in(0, 388, 100, 20)) {
-							putcstr((*wd).di.dname);
+							//putcstr((*wd).di.dname);
 						}
 						else {
 							winlist.delete_all();
+							win_count = 0;
 						}
 					}
 					else {					
@@ -169,6 +170,7 @@ pub unsafe fn parsekey(x: char) {
 						if (cursor_in((*selected_window).win.x+(*selected_window).win.width-10, (*selected_window).win.y-18, 12, 12) && (*selected_window).win.visible) {
 							(*selected_window).win.blank();
 							winlist.remove_win((*selected_window).win.id);
+							win_count -= 1;
 						}
 						else if (cursor_in((*selected_window).win.x+(*selected_window).win.width-26, (*selected_window).win.y-18, 12, 12) && (*selected_window).win.visible) {
 							(*selected_window).win.blank();

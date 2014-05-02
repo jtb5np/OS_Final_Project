@@ -129,11 +129,11 @@ pub unsafe fn parsekey(x: char) {
 				{
 					if (cursor_in(0, 388, 100, 40)) {
 						if (cursor_in(0, 388, 100, 20)) {
-							create_file_window();
 							//putcstr((*wd).di.dname);
 						}
 						else {
 							winlist.delete_all();
+							win_count = 0;
 						}
 					}
 					else {					
@@ -170,6 +170,7 @@ pub unsafe fn parsekey(x: char) {
 						if (cursor_in((*selected_window).win.x+(*selected_window).win.width-10, (*selected_window).win.y-18, 12, 12) && (*selected_window).win.visible) {
 							(*selected_window).win.blank();
 							winlist.remove_win((*selected_window).win.id);
+							win_count -= 1;
 						}
 						else if (cursor_in((*selected_window).win.x+(*selected_window).win.width-26, (*selected_window).win.y-18, 12, 12) && (*selected_window).win.visible) {
 							(*selected_window).win.blank();
@@ -363,12 +364,6 @@ unsafe fn paint() {
 
 unsafe fn cursor_in(x: u32, y: u32, width: u32, height: u32) -> bool {
 	(io::CURSOR_X > x) && (io::CURSOR_X < (x + width)) && (io::CURSOR_Y > y) && (io::CURSOR_Y < (y + height))
-}
-
-unsafe fn create_file_window() {
-	win_count += 1;
-	let mut w = window::new((*wd).di.dname, 50 + 10*(win_count as u32), 50 + 10*(win_count as u32), 200, 200, win_count, true);
-	//winlist.add_win_back(w);
 }
 
 unsafe fn read_file(filename: cstr) -> cstr {
