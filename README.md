@@ -9,7 +9,7 @@ A fork of [rustboot] focusing on ARM functionality and aiming to extend it into 
 You need a few things to run ironkernel:
 
 1. [rust-core]
-2. [Rust's `master` branch][rust] or 0.9 release
+2. Rust's 0.9 release (hopefully this will be updated to a more recent version of Rust sometime)
 3. qemu
 4. llvm
 5. binutils for arm-none-eabi
