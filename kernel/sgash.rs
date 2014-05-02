@@ -125,13 +125,18 @@ pub unsafe fn parsekey(x: char) {
 					tbar.close_menu();
 					tbar.clear_menu();
 				}
-				else if (tbar.menu_open && cursor_in(0, 408, 100, 40))
+				else if (tbar.menu_open && cursor_in(0, 388, 100, 60))
 				{
-					if (cursor_in(0, 408, 100, 20)) {
-						winlist.delete_all();
+					if (cursor_in(0, 388, 100, 40)) {
+						if (cursor_in(0, 388, 100, 20)) {
+							putcstr((*wd).di.dname);
+						}
+						else {
+							winlist.delete_all();
+						}
 					}
 					else {					
-						create_window(cstr::from_str("Window"));
+						create_window();
 					}
 				}
 				else if (cursor_in(58, 449, 580, 29)) {
@@ -246,9 +251,9 @@ pub unsafe fn parsekey(x: char) {
 		paint();
 }
 
-unsafe fn create_window(nm: cstr) {
+unsafe fn create_window() {
 	win_count += 1;
-	let mut w = window::new(nm, 50 + 10*(win_count as u32), 50 + 10*(win_count as u32), 200, 200, win_count, true);
+	let mut w = window::new(cstr::from_str("Window"), 50 + 10*(win_count as u32), 50 + 10*(win_count as u32), 200, 200, win_count, true);
 	winlist.add_win_back(w);
 }
 
@@ -330,11 +335,11 @@ unsafe fn parse() {
 					Some(words)        => {
 						let mut file = (*wd).di.get_file(filename);
 				    		if !(file.fname.streq(&"")) {
-							write_file(filename, words);
+							(*wd).di.write_file(filename, words);
 						}
 						else {
 							create_file(wd, filename);
-							write_file(filename, words);
+							(*wd).di.write_file(filename, words);
 						}
 					}
 					None        => { }
@@ -363,9 +368,9 @@ unsafe fn read_file(filename: cstr) -> cstr {
 	(*wd).di.read_file(filename)
 }
 
-unsafe fn write_file(filename: cstr, word: cstr) -> bool {
-	(*wd).di.write_file(filename, word)
-}
+//unsafe fn write_file(filename: cstr, word: cstr) -> bool {
+//	(*wd).di.write_file(filename, word)
+//}
 
 unsafe fn create_file(dir: *mut dirnode, name: cstr) {
 	let mut newfile = file::new(1024, name);
@@ -376,9 +381,9 @@ unsafe fn delete_file(dir: *mut dirnode, name: cstr) -> bool {
 	(*dir).di.remove_file(name)
 }
 
-unsafe fn list_directory(dir: *mut dirnode) {
-	(*dir).di.directory_file_list()
-}
+//unsafe fn list_directory(dir: *mut dirnode) {
+//	(*dir).di.directory_file_list()
+//}
 
 unsafe fn create_directory(parent: *mut dirnode, dnm: cstr) {
 	let mut newdir = directory::new(dnm, parent);
