@@ -82,6 +82,10 @@ Using the graphical shell:
 Use the arrow keys to move the cursor around the screen.  Press \ (backslash) to "click" the mouse.  Clicking on the taskbar menu button will show available options.  Currently, only "Open Window", which creates a default window, and "Close All", which closes all windows, actually do anything significant.  Clicking "Show Files" currently does nothing.  Clicking a window in the lower right corner and moving the cursor allows you to resize the selected window.  Clicking the bar at the top of a window and moving the cursor allows you to move the window.  Closing and minimizing windows work more or less as you would expect them to.  Lastly, you can press Tab to switch between open windows.
 
 
+## Warning
+
+A memory-cap currently exists in sgash.rs, and Iron Kernel will not run correctly if more code is added. Fixing this issue is suggested before attempting to make any code additions to the graphical shell.
+
 [rust-core]: https://github.com/thestinger/rust-core
 [rustboot]: https://github.com/pczarn/rustboot
 [rust]: https://github.com/mozilla/rust
